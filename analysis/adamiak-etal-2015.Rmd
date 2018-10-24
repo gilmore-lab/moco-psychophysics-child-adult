@@ -1,0 +1,66 @@
+---
+title: "adamiak-etal-2015"
+author: "Rick O. Gilmore"
+date: "`r Sys.time()`"
+output: html_document
+params:
+  local_data: FALSE
+---
+
+```{r set-directories, echo=FALSE, include=FALSE}
+dir_analysis <- 'analysis'
+dir_img <- paste(dir_analysis, 'img/', sep='/')
+dir_data <- paste(dir_analysis, 'data', sep='/')
+
+fn_data <- paste(dir_data, 'adult-laminar-radial-grouped.csv', sep='/')
+url_data <- 'https://raw.githubusercontent.com/gilmore-lab/moco-3-pattern-psychophysics/master/adult-laminar-radial/analysis/data/adult-laminar-radial-grouped.csv'
+```
+
+```{r knitr-options, echo = FALSE, include = FALSE}
+knitr::opts_chunk$set(comment = NA, echo = FALSE, error = FALSE, warnings = FALSE, message = FALSE, include = FALSE, fig.path = dir_img)
+```
+
+```{r load-packages}
+library(ggplot2)
+library(dplyr)
+library(lme4)
+library(psyphy)
+library(repmis)
+```
+
+```{r source-functions}
+source('analysis/plot.moco.psychophys.R')
+```
+
+```{r load-data}
+if (params$local_data){
+  df.merge <- read.csv(file = fn_data)
+} else {
+  df.merge <- repmis::source_data(url_data)
+}
+```
+
+## Plots by participant with group level smoother
+
+```{r create-corr-incorr-table, echo = TRUE, include = TRUE}
+# Drop Participant 14 based on visual inspection of RT, p(corr) plots
+drop_id <- 14
+
+# Summary data table at participant level
+df.bysub <- df.merge %>%
+  group_by( SpeedOrder, ParticipantID, PatternType, DegPSec, Coh ) %>%
+  filter( !( ParticipantID == drop_id ) )  %>%  
+  summarise( corr=sum( Acc == TRUE ),
+             incorr=sum( Acc == FALSE),
+             nsamples=n(),
+             rt.mean=mean(RT),
+             rt.sd=sd(RT))
+```
+
+```{r plot-pcorr, include=TRUE}
+plot.moco.psychophys(df = df.bysub, resp_var = 'p.corr', show_title = TRUE)
+```
+
+```{r plot-rt, include=TRUE}
+plot.moco.psychophys(df = df.bysub, resp_var = 'rt', show_title = TRUE)
+```

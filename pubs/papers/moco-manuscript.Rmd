@@ -1,0 +1,55 @@
+---
+title: "moco-manuscript"
+author: "Yiming"
+date: "10/24/2018"
+output: github-document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Author guidelines:
+Developmetnal Psychology
+Vision Research
+Journal of Vision
+Eye Perception
+Perception of psychophysics
+JEP: Human Perception
+Visual Cognition
+Perception
+
+# Developmetnal changes of senstivity to optic flow vary by pattern type and motion speed 
+
+## Abstract
+
+## Introduction
+
+## Methods
+### Overview
+All participants had normal vision or corrected to normal vision. Written consent to participate was obtained from adult participants or from parents or guardians on behalf of child participants under  procedures approved by the Institutional Review Board of The Pennsylvania State University (#37946). The research was conducted according to the principles expressed in the Declaration of Helsinki. Participants were given credit or $10 per hour for their participation.
+
+
+## Experiment 1: Adults
+30 adults (14 male, 16 female; age range: 18.7-23.9; mean age: 20.8 years, SD = X) participated in this study. The sample consisted of young adults recruited from the undergraduate psychology subject pool at the Pennsylvania State University.  One participant’s data was removed from analysis for failure to follow task instructions. Resulting in 29 adults 14 male, 15 female; age range: X; mean age: X years, SD = X) utilized for analysis.
+### Method
+#### Participants
+#### Stimuli 
+#### Procedures
+#### Data analysis
+### Results and discussion
+
+## Experiment 2: Children
+
+31 children (19  female; age range: 5.2-8.6 years; mean age: 6.7 years (SD=1.0)) participated in the study. The sample consisted of children drawn from a database of families in Centre County, Pennsylvania. Children were excluded if they were born prematurely, had a history of serious visual or medical problems, epilepsy, or seizures. One participant's data (1045) was excluded due to incomplete data collection.
+### Method
+#### Participants
+#### Stimuli 
+#### Procedures
+#### Data analysis
+### Results and discussion
+
+## General discussion
+
+## Conclusion
+
+## Reference

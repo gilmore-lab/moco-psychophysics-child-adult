@@ -1,0 +1,414 @@
+---
+title: "group-analysis-children"
+author: "Rick O. Gilmore"
+date: "`r Sys.time()`"
+output: 
+  html_document:
+    self_contained: false
+    code_folding: show
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    dpi: 300
+    dev: pdf
+  github_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, include = TRUE)
+
+# Install packman for subsequent package management
+# install.packages("pacman")
+if (!("pacman" %in% installed.packages()[,])) {
+    install.packages("pacman")
+  }
+library(pacman)
+pacman::p_load(dplyr, ggplot2, knitr, psyphy, lme4, sjPlot)
+```
+
+## Background
+
+This document describes the workflow involved in analyzing the motion coherence psychophysics study carried out with child participants.
+
+# Data import 
+
+## Create aggregate data file
+
+```{r create-aggregate-data-file}
+# Paths
+
+analyses.dir <- "analyses"
+session.dir <- "session-data"
+data.dir <- paste(analyses.dir, session.dir, sep="/")
+metadata.dir <- paste(analyses.dir, "data-participant-metadata", sep = "/")
+metadata.fn <- paste(metadata.dir, "moco_child_participant_metadata.csv", sep="/")
+aggregate.dir <- paste(analyses.dir, "data-aggregate", sep="/")
+aggregate.fn <- paste(aggregate.dir, "moco-beh-child.csv", sep = "/")
+
+# Source dependent functions
+
+r.list <- list("analyses/extract.date.sub.R", "analyses/standardize.date.R", "analyses/df.moco.child.R")
+lapply(r.list, source, echo = FALSE, print.eval = FALSE)
+
+# Load datafiles
+df.list <- lapply(list.files(path=data.dir, pattern = ".csv$", full.names = TRUE), df.moco.child)
+
+msg <- sprintf("Creating aggregate data file from sessions in:\n\t%s\n", data.dir)
+cat(msg)
+df.all <- Reduce(function(x,y) merge(x,y, all=TRUE), df.list)
+
+sub.data <- read.csv(file = metadata.fn, header=TRUE)
+moco.beh.child <- merge(df.all, sub.data, by.x = "SubID", by.y = "participant.ID")
+
+# Drop variables, normalize names
+drop.vars <- c("session.date", "participant.birthdate")
+moco.beh.child <- moco.beh.child[, !(names(moco.beh.child) %in% drop.vars)]
+names(moco.beh.child)[11:14] <- c("AgeDays", "Gender", "Condition", "Group")
+
+# Load libraries
+library(dplyr)
+library(ggplot2)
+
+# Add Coh
+moco.beh.child %>% mutate(Coh = LeftCoh + RightCoh) -> moco.beh.child
+
+# Fix NA problem
+moco.beh.child$Acc <- as.logical(moco.beh.child$Acc)
+moco.beh.child$Acc[is.na(moco.beh.child$Acc)] <- FALSE
+
+# Write summary stats
+moco.beh.child %>% group_by(SubID, PatternType, Speed, Coh) %>% 
+  summarize(N.corr = sum(Acc), N.tot = n(), Pct.Corr = N.corr/N.tot) -> d.summ
+
+# Write data file to csv
+write.csv(x = moco.beh.child, file = aggregate.fn, row.names = FALSE)
+msg <- sprintf("Wrote aggregate data file to: \n\t%s\n", aggregate.fn)
+cat(msg)
+
+# Clean-up
+rm(d.summ, df.all, moco.beh.child, sub.data, 
+   aggregate.dir, aggregate.fn, analyses.dir, data.dir, df.list,
+   drop.vars, metadata.fn, metadata.dir, r.list, session.dir)
+
+rm(df.moco.child, extract.date.sub, standardize.date)
+```
+
+## Import aggregate data
+
+Here we import the aggregate data file found in `analyses/data-aggregate/moco-beh-child.csv`, convert `AgeDays` to a categorical factor, `AgeYrs`, and compute some summary statistics across trial and block. These summary values are saved to the  `df.bysub.bycond` data frame.
+
+```{r import-data}
+# Import child data, normalize
+
+df <- read.csv(file = "analyses/data-aggregate/moco-beh-child.csv", header = TRUE)
+
+# Convert age in days to years
+df$AgeYrs <- ordered(cut(df$AgeDays/365.25, 
+                 breaks = c(0,5,6,7,8,9), 
+                 labels = c("<5yo", "5yo", "6yo", "7yo", "8yo")))
+
+df %>% 
+  group_by(AgeYrs, Gender, AgeDays, SubID, PatternType, Speed, Coh) %>% 
+  summarize(N.corr = sum(Acc), 
+            N.tot = n(), 
+            Pct.Corr = N.corr/N.tot,
+            RT.mean=mean(RT),
+            RT.sd=sd(RT)) -> 
+  df.bysub.bycond
+```
+
+# Data summaries
+
+## Tabular summary of participant ages by gender
+
+```{r age-gender-table, include=TRUE}
+# Summary table of age/gender dist
+df.bysub.bycond %>% 
+  group_by(Gender, AgeYrs, SubID) %>% 
+  summarize(num = n()) -> df.gender.age
+xt <- xtabs(formula = ~ AgeYrs + Gender, data = df.gender.age)
+kable(xt)
+```
+
+We tested *n*=`r sum(xt)` children overall, (`r sum(xt[,1])` female) between 5 and 8 years of age.
+
+## Participant table
+
+```{r participant-table}
+df.bysub.bycond %>%
+  group_by(AgeYrs, AgeDays, Gender, SubID) %>%
+  summarize(N = n()) %>%
+  arrange(SubID) %>%
+  knitr::kable()
+```
+
+
+## Histogram of age
+
+```{r age-histogram, include=TRUE}
+df %>%
+  group_by(AgeYrs, SubID, AgeDays) %>%
+  summarize(SubAgeDays = mean(AgeDays)) %>%
+  ggplot() +
+  aes(x=SubAgeDays/365.25, fill = AgeYrs) + # By years?
+  geom_histogram() +
+  xlab("Age in Years")
+```
+
+## Violin plot of age by sex
+
+```{r age-sex-violin, include=TRUE}
+theme.custom <- theme(plot.title = element_text(size=16, face="bold"),
+                      axis.title.x = element_text(size=14),
+                      axis.title.y = element_text(size=14),
+                      strip.text = element_text(size=14),
+                      axis.text = element_text(size=11),
+                      legend.position="bottom", 
+                      legend.title=element_blank(),
+                      legend.text=element_text(size=11))
+
+df %>%
+  group_by(AgeYrs, Gender, SubID, AgeDays) %>%
+  summarize(SubAgeDays = mean(AgeDays)) %>%
+  ggplot() +
+  aes(x=Gender, y=SubAgeDays/365.25) + # By years?
+  # geom_boxplot() +
+  geom_violin() +
+  geom_point(aes(color=AgeYrs, size=1)) +
+  ylab("Age in Years") +
+  theme_bw() +
+  theme.custom +
+  guides(size=FALSE)
+```
+
+## Plot of *p*(corr) by condition
+
+```{r p-corr-pattern-speed-plot, include=TRUE}
+  # Plot theme, customizations
+
+y_lbl <- 'p(corr)'
+title_text <- 'p(corr) by Coherence, Pattern, and Speed'
+df.bysub.bycond$Speed <- factor(df.bysub.bycond$Speed, labels = c("2 deg/s", "8 deg/s"))
+
+# Plot for all subs
+p <- ggplot(data=df.bysub.bycond, aes(x=Coh, y=Pct.Corr)) 
+p <- p + 
+  geom_line(aes(group=SubID, color=AgeYrs)) +
+  facet_grid(facets = Speed ~ PatternType) +
+  labs(x="Coherence", y=y_lbl) +
+  #ggtitle(title_text) +
+  theme_bw() +
+  theme.custom +
+  xlim(0, 1) +
+  geom_hline(yintercept=0.5, linetype="dashed")
+p
+```
+
+The proportion correct responses generally increase with increasing coherence. There is a hint that younger children are less accurate.
+
+## Plot of reaction time
+
+```{r rt-pattern-speed-plot, include=TRUE}
+# Plot RTs
+y_lbl <- 'RT (s)'
+title_text <- 'RT by Coherence, Pattern, and Speed'
+
+# Plot for all subs
+p <- ggplot(data=df.bysub.bycond, aes(x=Coh, y=RT.mean))
+p <- p + 
+  geom_line(aes(group=SubID, color=AgeYrs)) +
+  facet_grid(facets = Speed ~ PatternType) +
+  labs(x="Coherence", y=y_lbl) +
+  # ggtitle(title_text) +
+  theme_bw() +
+  theme.custom +
+  xlim(0, 1)
+p 
+``` 
+
+Reaction times generally decrease with increasing coherence. There is evidence that younger children are slower.
+
+## Plot of speed across patterns by age
+
+```{r p-corr-by-speed-and-age-plot}
+# Evaluate Speed by Coherence interaction
+spd.by.coh <- df.bysub.bycond %>%
+  group_by(Speed, Coh, AgeYrs) %>%
+  summarize(Pct.Corr.mean = mean(Pct.Corr, na.rm=TRUE),
+            Pct.Corr.sem = sd(Pct.Corr, na.rm=TRUE)/sqrt( n() ))
+
+limits = aes( ymax = Pct.Corr.mean + Pct.Corr.sem , ymin = Pct.Corr.mean - Pct.Corr.sem )
+
+p6 <- 
+  ggplot( data=spd.by.coh, aes(x=Coh, y=Pct.Corr.mean, color = AgeYrs) ) +
+  facet_grid( facets = . ~ Speed ) +
+  geom_line() +
+  geom_pointrange( limits ) +
+  xlim(0,1) +
+  ylim(.4, 1) +
+  ylab("p(corr)") +
+  xlab("Coherence)") +
+  theme_bw() +
+  theme.custom +
+  geom_hline(yintercept=0.5, linetype="dashed")
+p6
+```
+
+## Plot of coherence by pattern across age
+
+```{r p-corr-by-pattern-and-age-plot, include=TRUE}
+patt.by.coh <- df.bysub.bycond %>%
+  group_by(PatternType, Coh, AgeYrs) %>%
+  summarize(Pct.Corr.mean = mean(Pct.Corr, na.rm=TRUE),
+            Pct.Corr.sem = sd(Pct.Corr, na.rm=TRUE)/sqrt( n() ))
+
+limits = aes( ymax = Pct.Corr.mean + Pct.Corr.sem , ymin = Pct.Corr.mean - Pct.Corr.sem )
+
+p7 <- 
+  ggplot( data=patt.by.coh, aes(x=Coh, y=Pct.Corr.mean, color = AgeYrs) ) +
+  facet_grid( facets = ~ PatternType ) +
+  geom_line() +
+  geom_pointrange( limits ) +
+  xlim(0, 1) +
+  ylim(.4, 1) +
+  ylab("p(corr)") +
+  xlab("Coherence)") +
+  theme_bw() +
+  theme.custom +
+  geom_hline(yintercept=0.5, linetype="dashed")
+p7
+```
+
+### RT by speed across patterns
+
+```{r rt-by-speed-and-age-plot, include=TRUE}
+# Evaluate Speed by Coherence interaction
+spd.by.coh.rt <- df.bysub.bycond %>%
+  group_by(Speed, Coh, AgeYrs) %>%
+  summarize(RT.Cond.mean = mean(RT.mean, na.rm=TRUE),
+            RT.sem = sd(RT.sd, na.rm=TRUE)/sqrt( n() ))
+
+limits = aes(ymax = RT.Cond.mean + RT.sem, ymin = RT.Cond.mean - RT.sem)
+
+p.rt <- 
+  ggplot( data=spd.by.coh.rt, aes(x=Coh, y=RT.Cond.mean, color = AgeYrs)) +
+  facet_grid( facets = . ~ Speed ) +
+  geom_line() +
+  geom_pointrange( limits ) +
+  xlim(0,1) +
+  ylab("RT (s)") +
+  xlab("Coherence") +
+  theme_bw() +
+  theme.custom
+p.rt
+```
+
+## RT by pattern across age
+
+```{r rt-by-pattern-and-age-plot}
+patt.by.coh.rt <- df.bysub.bycond %>%
+  group_by(PatternType, Coh, AgeYrs) %>%
+  summarize(RT.Cond.mean = mean(RT.mean, na.rm=TRUE),
+            RT.sem = sd(RT.sd, na.rm=TRUE)/sqrt( n() ))
+
+limits = aes(ymax = RT.Cond.mean + RT.sem, ymin = RT.Cond.mean - RT.sem)
+
+p7 <- 
+  ggplot( data=patt.by.coh.rt, aes(x=Coh, y=RT.Cond.mean, color = AgeYrs)) +
+  facet_grid( facets = ~ PatternType ) +
+  geom_line() +
+  geom_pointrange( limits ) +
+  xlim(0, 1) +
+  ylab("RT (s)") +
+  xlab("Coherence") +
+  theme_bw() +
+  theme.custom
+p7
+```
+
+# Statistical modeling
+
+## Probit analysis of *p*(corr)
+
+### Full model
+
+```{r probit-full, eval=FALSE}
+form.full <- Acc ~ AgeYrs * Coh * Speed * PatternType + (1|SubID)
+mod.full <- glmer(formula = form.full, family=binomial(mafc.probit(2)), data = df)
+```
+
+```{r summary.full.model, eval=FALSE}
+summary(mod.full)
+```
+
+The full model fails to converge, so let's fit a model without `AgeYrs` than add back in those effects.
+
+### Drop age
+
+```{r probit-drop-age, eval=FALSE}
+form.drop.age <- Acc ~ Coh * Speed * PatternType + (1|SubID)
+mod.drop.age <- glmer(formula = form.drop.age, family=binomial(mafc.probit(2)), data = df)
+```
+
+This model also fails to converge, so let's choose specific effects that appear to characterize the fits. 
+
+### Drop high level interactions
+
+```{r probit-drop-age-3-way, eval=FALSE}
+form.drop.three.way <- Acc ~ Coh + Speed + PatternType + Coh:Speed + Coh:PatternType + (1|SubID)
+mod.drop.three.way <- glmer(formula = form.drop.three.way, family=binomial(mafc.probit(2)), data = df)
+```
+
+Model fails to converges.
+
+### Go for main effects only
+
+```{r probit-main-effects}
+form.main.eff <- Acc ~ Coh + PatternType + Speed + (1|SubID)
+mod.main.eff <- glmer(formula = form.main.eff, family=binomial(mafc.probit(2)), data = df)
+```
+
+Model converges.
+
+```{r summary-main-effects}
+summary(mod.main.eff)
+```
+
+
+### Table for best-fitting model (without age)
+
+```{r best-probit-fit-table, results="asis"}
+# Neither pander nor xtable had appropriate methods to print the table
+
+# pander(mod.drop.three.way)
+# print(xtable(mod.drop.three.way), type = "html")
+sjt.glmer(mod.main.eff)
+```
+
+### Add age back in to best model
+
+```{r probit-age-back-in}
+age.main <- Acc ~ AgeYrs + Coh + PatternType + Speed + (1|SubID)
+mod.age.main <- update(mod.main.eff, formula=age.main)
+```
+
+Model converges.
+
+```{r summary-age-plus}
+summary(mod.age.main)
+```
+
+Is age needed?
+
+```{r need-age}
+av <- anova(mod.main.eff, mod.age.main)
+```
+ 
+Yes, the goodness of fit dropped substantially without `AgeYrs`. 
+##3 Tabular summary of main effects with age 
+
+```{r main-effects-with-age-table}
+sjt.glmer(mod.age.main)
+```
+
+
