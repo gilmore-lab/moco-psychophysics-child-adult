@@ -1,0 +1,81 @@
+Block,Trial,PatternType,LeftCoh,RightCoh,Response,RT,Acc
+1,1,linear,0,0.8,R,5.6235,TRUE
+1,2,linear,0.8,0,L,1.7016,TRUE
+1,3,radial,0.4,0,R,1.1513,FALSE
+1,4,radial,0,0.4,L,1.5849,FALSE
+1,5,linear,0.6,0,R,2.2059,FALSE
+1,6,linear,0.4,0,R,1.4347,FALSE
+1,7,linear,0,0.2,R,2.0358,TRUE
+1,8,linear,0,0.4,L,1.2855,FALSE
+1,9,linear,0.2,0,R,1.4678,FALSE
+1,10,linear,0,0.6,R,0.85045,TRUE
+1,11,radial,0,0.2,L,0.98426,FALSE
+1,12,radial,0.8,0,R,1.134,FALSE
+1,13,radial,0.6,0,L,0.95081,TRUE
+1,14,radial,0,0.8,R,0.95095,TRUE
+1,15,radial,0.2,0,R,0.8676,FALSE
+1,16,radial,0,0.6,R,1.254,TRUE
+2,1,radial,0.4,0,L,2.4353,TRUE
+2,2,radial,0,0.4,R,0.86744,TRUE
+2,3,linear,0,0.8,R,1.4234,TRUE
+2,4,radial,0,0.2,R,1.8188,TRUE
+2,5,radial,0.8,0,R,1.3179,FALSE
+2,6,radial,0.6,0,R,1.0511,FALSE
+2,7,radial,0,0.8,R,0.93993,TRUE
+2,8,radial,0.2,0,R,1.0356,FALSE
+2,9,radial,0,0.6,R,2.0685,TRUE
+2,10,linear,0.8,0,R,4.4714,FALSE
+2,11,linear,0.6,0,R,3.5946,FALSE
+2,12,linear,0.4,0,R,1.5179,FALSE
+2,13,linear,0,0.2,R,1.0674,TRUE
+2,14,linear,0,0.4,R,5.6047,TRUE
+2,15,linear,0.2,0,L,1.2344,TRUE
+2,16,linear,0,0.6,R,2.0185,TRUE
+3,1,radial,0.4,0,R,5.2546,FALSE
+3,2,radial,0,0.4,L,1.2346,FALSE
+3,3,radial,0,0.2,R,1.2708,TRUE
+3,4,linear,0,0.8,R,1.1354,TRUE
+3,5,radial,0.8,0,R,0.75106,FALSE
+3,6,radial,0.6,0,R,0.96775,FALSE
+3,7,linear,0.8,0, ,0,0
+3,8,linear,0.6,0,R,0.7515,FALSE
+3,9,radial,0,0.8,R,0.91751,TRUE
+3,10,radial,0.2,0,R,0.72526,FALSE
+3,11,radial,0,0.6,R,0.80078,TRUE
+3,12,linear,0.4,0,R,0.93457,FALSE
+3,13,linear,0,0.2,R,0.91735,TRUE
+3,14,linear,0,0.4,L,0.71726,FALSE
+3,15,linear,0.2,0,R,1.2023,FALSE
+3,16,linear,0,0.6,R,0.98431,TRUE
+4,1,linear,0,0.8, ,0,0
+4,2,radial,0.4,0,R,1.8183,FALSE
+4,3,radial,0,0.4,L,1.2679,FALSE
+4,4,linear,0.8,0,R,1.4528,FALSE
+4,5,radial,0,0.2,L,1.7682,FALSE
+4,6,radial,0.8,0, ,0,0
+4,7,radial,0.6,0, ,0,0
+4,8,radial,0,0.8,R,1.0179,TRUE
+4,9,radial,0.2,0,R,1.0175,FALSE
+4,10,radial,0,0.6,R,0.85097,TRUE
+4,11,linear,0.6,0,R,1.0008,FALSE
+4,12,linear,0.4,0,L,1.2842,TRUE
+4,13,linear,0,0.2,R,1.0343,TRUE
+4,14,linear,0,0.4,R,0.8341,TRUE
+4,15,linear,0.2,0,R,0.73393,FALSE
+4,16,linear,0,0.6,R,0.98452,TRUE
+5,1,linear,0,0.8,R,8.3407,TRUE
+5,2,radial,0.4,0,R,1.3178,FALSE
+5,3,radial,0,0.4,R,2.6429,TRUE
+5,4,linear,0.8,0,L,1.1677,TRUE
+5,5,linear,0.6,0,R,1.1845,FALSE
+5,6,linear,0.4,0, ,0,0
+5,7,radial,0,0.2,R,0.984,TRUE
+5,8,radial,0.8,0, ,0,0
+5,9,linear,0,0.2,R,0.72187,TRUE
+5,10,linear,0,0.4,R,0.83409,TRUE
+5,11,radial,0.6,0,R,0.81772,FALSE
+5,12,linear,0.2,0,R,0.73399,FALSE
+5,13,linear,0,0.6, ,0,0
+5,14,radial,0,0.8,R,1.0175,TRUE
+5,15,radial,0.2,0,R,0.76845,FALSE
+5,16,radial,0,0.6,R,0.76719,TRUE

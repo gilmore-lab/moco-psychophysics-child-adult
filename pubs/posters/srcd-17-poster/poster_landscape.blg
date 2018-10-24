@@ -1,0 +1,65 @@
+This is BibTeX, Version 0.99d (TeX Live 2015)
+Capacity: max_strings=35307, hash_size=35307, hash_prime=30011
+The top-level auxiliary file: poster_landscape.aux
+The style file: IEEEtran.bst
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated wiz_functions (elt_size=4) to 6000 items from 3000.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Database file #1: IEEEabrv.bib
+Database file #2: poster_landscape.bib
+I was expecting a `,' or a `}'---line 68 of file poster_landscape.bib
+ :  title = {Adult observers' sensitivity to optic flow varies by pattern} 
+ :                                                                         and speed},
+I'm skipping whatever remains of this entry
+-- IEEEtran.bst version 1.13 (2008/09/30) by Michael Shell.
+-- http://www.michaelshell.org/tex/ieeetran/bibtex/
+-- See the "IEEEtran_bst_HOWTO.pdf" manual for usage information.
+Warning--empty author in adamiak_adult_2015
+Warning--empty journal in adamiak_adult_2015
+Warning--empty year in adamiak_adult_2015
+
+Done.
+You've used 5 entries,
+            4039 wiz_defined-function locations,
+            1236 strings with 15924 characters,
+and the built_in function-call counts, 3818 in all, are:
+= -- 323
+> -- 71
+< -- 31
++ -- 39
+- -- 11
+* -- 207
+:= -- 594
+add.period$ -- 10
+call.type$ -- 5
+change.case$ -- 5
+chr.to.int$ -- 66
+cite$ -- 8
+duplicate$ -- 277
+empty$ -- 285
+format.name$ -- 15
+if$ -- 855
+int.to.chr$ -- 0
+int.to.str$ -- 5
+missing$ -- 43
+newline$ -- 44
+num.names$ -- 4
+pop$ -- 93
+preamble$ -- 1
+purify$ -- 0
+quote$ -- 2
+skip$ -- 295
+stack$ -- 0
+substring$ -- 175
+swap$ -- 232
+text.length$ -- 9
+text.prefix$ -- 0
+top$ -- 5
+type$ -- 5
+warning$ -- 3
+while$ -- 17
+width$ -- 6
+write$ -- 77
+(There was 1 error message)

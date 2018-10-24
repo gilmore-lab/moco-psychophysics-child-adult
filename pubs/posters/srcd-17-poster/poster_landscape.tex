@@ -1,0 +1,222 @@
+\documentclass[landscape,final,paperwidth=60in,paperheight=39in,fontscale=0.285]{baposter}
+%\usepackage{calc,array}
+\usepackage{graphicx} % Required for including images
+\usepackage{amsmath}  % For typesetting math
+\usepackage{amssymb}  % Adds new symbols to be used in math mode
+\usepackage{relsize}  % Chagnge size of text /smaller, /larger
+\usepackage{multirow} % Allows table cells to span more than one row of the table
+\usepackage{rotating} % Rotate figures and tables
+\usepackage{bm}       % Allows a math expression to be bold
+\usepackage{url}      % Allows email address and websites
+\usepackage{gensymb}  % Allows degree symbol
+\usepackage{siunitx}  % Scientific notation
+
+\usepackage{float}
+\usepackage{caption} % Required for specifying captions to tables and figures
+\usepackage{wrapfig} % Wrap text around figure
+\usepackage[export]{adjustbox}
+
+%\captionsetup[figure]{font=Large,skip=0pt,labelformat=empty,justification=raggedright,singlelinecheck=false}
+
+\usepackage{multicol} % Required for multiple columns
+
+\usepackage[utf8]{inputenc} %Required for IEEE reference style
+\newcommand{\BIBdecl}{\setlength{\itemsep}{-0.25 em}} %Removes line space between references
+
+% Fonts
+%\usepackage{times}
+%\usepackage{helvet}
+%\usepackage{bookman}
+\usepackage{palatino}
+
+%\newcommand{\captionfont}{\footnotesize}
+
+\graphicspath{{../../group-analysis-child_files/figure-html}{img/}}
+%\usetikzlibrary{calc}
+
+\newcommand{\SET}[1]  {\ensuremath{\mathcal{#1}}}
+\newcommand{\MAT}[1]  {\ensuremath{\boldsymbol{#1}}}
+\newcommand{\VEC}[1]  {\ensuremath{\boldsymbol{#1}}}
+\newcommand{\Video}{\SET{V}}
+\newcommand{\video}{\VEC{f}}
+\newcommand{\track}{x}
+\newcommand{\Track}{\SET T}
+\newcommand{\LMs}{\SET L}
+\newcommand{\lm}{l}
+\newcommand{\PosE}{\SET P}
+\newcommand{\posE}{\VEC p}
+\newcommand{\negE}{\VEC n}
+\newcommand{\NegE}{\SET N}
+\newcommand{\Occluded}{\SET O}
+\newcommand{\occluded}{o}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Multicol Settings
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setlength{\columnsep}{1.5em}
+\setlength{\columnseprule}{0mm}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Save space in lists. Use this after the opening of the list
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newcommand{\compresslist}{%
+\setlength{\itemsep}{1pt}%
+\setlength{\parskip}{0pt}%
+\setlength{\parsep}{0pt}%
+}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Begin of Document
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Here starts the poster
+%%%---------------------------------------------------------------------------
+%%% Format it to your taste with the options
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Define some colors
+
+%\definecolor{lightblue}{cmyk}{0.83,0.24,0,0.12}
+\definecolor{lightblue}{rgb}{0.145,0.6666,1}
+
+%\newtcolorbox{demobox}[1][]{colback=white,colframe=lightblue,width=0.33\linewidth,nobeforeafter,box align=top,before=\noindent,#1}
+
+%%
+\begin{poster}%
+  % Poster Options
+  {
+  % Show grid to help with alignment
+  grid=false,
+  % Column spacing
+  colspacing=1em,
+  % Color style
+  bgColorOne=white,
+  bgColorTwo=white,
+  borderColor=lightblue,
+  headerColorOne=black,
+  headerColorTwo=lightblue,
+  headerFontColor=white,
+  boxColorOne=white,
+  boxColorTwo=lightblue,
+  % Format of textbox
+  textborder=roundedleft,
+  % Format of text header
+  eyecatcher=true,
+  headerborder=closed,
+  headerheight=0.12\textheight,
+  columns=4, %default=4 for landscape posters maximum columns=6
+%  textfont=\sc, An example of changing the text font
+  headershape=roundedright,
+  headershade=shadelr,
+  headerfont=\Large\bf\textsc, %Sans Serif
+  textfont={\setlength{\parindent}{1.5em}},
+  boxshade=plain,
+%  background=shade-tb,
+  background=plain,
+  linewidth=2pt
+  }
+  % University logo
+  {\includegraphics[height=6em]{penn_state_cla_logo_new_210-89.jpg}}
+  % Title
+  {\bf{School-age children perceive fast radial optic flow in noise\\more accurately than slow linear flow} 
+  \vspace{0.3em}}
+  % Authors
+  {Rick O. Gilmore \emph{(rogilmore@psu.edu)}, Andrea R. Seisler, Michelle A. Shade, \& Michael J. O'Neill\\ \vspace{0.3em}
+  SRCD 2017 -- Poster Session 13: Poster 181}
+  % Databrary Logo
+ {\includegraphics[height=4em]{databrary.png}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Now define the boxes that make up the poster
+%%%---------------------------------------------------------------------------
+%%% Each box has a name and can be placed absolutely or relatively.
+%%% The only inconvenience is that you can only specify a relative position
+%%% towards an already declared box. So if you have a box attached to the
+%%% bottom, one to the top and a third one which should be in between, you
+%%% have to specify the top and bottom boxes before you specify the middle
+%%% box.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\headerbox{Motivation}{name=abstract,column=0,span=1,row=0}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    {
+      Behavioral and brain responses to optic flow undergo a prolonged developmental time course \cite{gilmore_childrens_2016} in part due to the changing statistics of visual experiences \cite{gilmore_what_2015,raudies_visual_2014}. This study examined whether the detection of optic flow in noise in child observers varies by pattern and speed in similar ways to adults \cite{adamiak_adult_2015}. We find that children show adult-like higher sensitivity to radial flow patterns, but immature sensitivity favoring fast (8 deg/s) flow speeds.
+    }
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\headerbox{Method}{name=method,column=0,span = 1,below=abstract}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    {
+\par Child observers (n=31; 5.2-8.6 years, \emph{M}=6.7, 19 female) participated for \$10 in compensation. One child failed to complete the study and was dropped from the analysis.
+\begin{center}
+\includegraphics[scale=0.4]{img/age-sex-violin-1.pdf}
+\end{center}
+\par Two side-by-side, time varying (1.2 Hz coherent/incoherent cycle) annular-shaped (18\degree outer/5\degree inner diameter) optic flow displays were presented at a viewing distance of 60 cm. Optic flow was generated by random dot kinematograms with white dots (110 cd/m, 7 amin) presented on a black background. In each trial, one display depicted random (0\% coherent) motion while the other depicted radial or linear motion at one of four fixed coherence levels in one of two coherence level profiles (20, 40, 60, 80\%) or (15, 30, 45, 60\%).
+\par Observers fixated centrally and judged which side contained coherent motion, indicating the choice by pointing to the monitor. The choice was entered via keypress by an experimenter seated behind the observer. Four runs were collected per participant. Each run contained 5 blocks of 16 trials. Within a single run, speed was either 2 or 8 deg/s. Four runs were collected per participant. Participants were given the option to take a break half way through the experiment. All data were collected in a single visit lasting approximately 1 hour.
+    }
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\headerbox{Displays}{name=displays, column=1, span=1, row=0}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    {
+\begin{center}
+\includegraphics[scale=0.4]{img/optic-flow-psychophysics-display.png}
+\includegraphics[scale=0.25]{img/apparatus-setup.jpg}
+\end{center}
+    }
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\headerbox{Results: Statistics}{name=stats, column=1, span=1, below=displays, above=bottom}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    {
+\par The figures show that with increasing motion coherence the proportion of correct judgments increased and response times declined. Accuracy in detecting flow at reached asymptote more quickly for faster (8 deg/sec) speeds than for slow (2 deg/sec) speeds. Similarly, accuracy in detecting radial flow patterns reached asymptote more quickly than detection of flow in linear patterns. Across all speed and pattern conditions, younger children showed poorer performance.
+\par We quantified these observations by using a generalized linear mixed effects model with a probit link function. The final model chosen included a random intercept term for participant and fixed effects for Age (b=0.850, z=5.533, p=\num{3.15e-08}), Pattern (b=0.604, z=11.307, p<\num{2e-16}), Coherence (b=3.677, z=22.549, p<\num{2e-16}), and Speed (b=0.057, z=6.508, p=\num{7.61e-11}. The model suggests that overall accuracy increases with age and with increasing coherence, and that accuracy is higher to faster radial patterns. 
+\par We found, but do not report here for space reasons, similar results for reaction time.
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\headerbox{Results: Accuracy}{name=accuracy, column=2, row=0, span=1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    {
+ \begin{center}
+ \includegraphics[scale=0.5,valign=t]{img/p-corr-pattern-speed-plot-1.pdf}
+ \includegraphics[scale=0.5,valign=t]{img/p-corr-by-speed-and-age-plot-1.pdf}
+ \includegraphics[scale=0.5,valign=t]{img/p-corr-by-pattern-and-age-plot-1.pdf}
+ \end{center}
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\headerbox{Results: Reaction Time}{name=rt, column=3, row=0, span=1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    {
+ \begin{center}
+ \includegraphics[scale=0.5,valign=t]{img/rt-pattern-speed-plot-1.pdf}
+ \includegraphics[scale=0.5,valign=t]{img/rt-by-speed-and-age-plot-1.pdf}
+ \includegraphics[scale=0.5,valign=t]{img/rt-by-pattern-and-age-plot-1.pdf}
+ \end{center}
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  \headerbox{Acknowledgements}{name=thanks, column=3, below=rt, above=bottom}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    {
+ %   \smaller
+      This material is based upon work supported by the National Science Foundation under Grant Number BCS-1147440. Any opinions, findings, and conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily reflect the views of the National Science Foundation.
+    }
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+   \headerbox{Data Sharing}{name=sharing, column=2, below=rt, above=bottom}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    {
+       Movies of the displays, metadata about the participants, and raw data files are available at: \url{http://databrary.org/volume/218}. Full reports of our data analysis workflows are available at: \url{http://github.com/gilmore-lab/moco-psychophysics/child-laminar-radial}
+     }
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ \headerbox{References}{name=refs, column=0, below=method, above=bottom}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  {
+  %For use with external .bib file
+  \tiny
+          \renewcommand{\refname}{\vspace{-0.5em}} % removes "References" canned text.
+          \bibliographystyle{IEEEtran}
+          \bibliography{IEEEabrv,poster_landscape}
+}
+\end{poster}
+\end{document}

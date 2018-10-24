@@ -1,0 +1,234 @@
+\documentclass[landscape,final,a0paper,fontscale=0.285]{baposter}
+
+\usepackage{calc}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{relsize}
+\usepackage{multirow}
+\usepackage{rotating}
+\usepackage{bm}
+\usepackage{url}
+
+\usepackage{graphicx}
+\usepackage{multicol}
+
+%\usepackage{times}
+%\usepackage{helvet}
+%\usepackage{bookman}
+\usepackage{palatino}
+
+\newcommand{\captionfont}{\footnotesize}
+
+\graphicspath{{images/}{../images/}}
+\usetikzlibrary{calc}
+
+\newcommand{\SET}[1]  {\ensuremath{\mathcal{#1}}}
+\newcommand{\MAT}[1]  {\ensuremath{\boldsymbol{#1}}}
+\newcommand{\VEC}[1]  {\ensuremath{\boldsymbol{#1}}}
+\newcommand{\Video}{\SET{V}}
+\newcommand{\video}{\VEC{f}}
+\newcommand{\track}{x}
+\newcommand{\Track}{\SET T}
+\newcommand{\LMs}{\SET L}
+\newcommand{\lm}{l}
+\newcommand{\PosE}{\SET P}
+\newcommand{\posE}{\VEC p}
+\newcommand{\negE}{\VEC n}
+\newcommand{\NegE}{\SET N}
+\newcommand{\Occluded}{\SET O}
+\newcommand{\occluded}{o}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Multicol Settings
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setlength{\columnsep}{1.5em}
+\setlength{\columnseprule}{0mm}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Save space in lists. Use this after the opening of the list
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newcommand{\compresslist}{%
+\setlength{\itemsep}{1pt}%
+\setlength{\parskip}{0pt}%
+\setlength{\parsep}{0pt}%
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Begin of Document
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Here starts the poster
+%%%---------------------------------------------------------------------------
+%%% Format it to your taste with the options
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Define some colors
+
+%\definecolor{lightblue}{cmyk}{0.83,0.24,0,0.12}
+\definecolor{lightblue}{rgb}{0.145,0.6666,1}
+
+%%
+\begin{poster}%
+  % Poster Options
+  {
+  % Show grid to help with alignment
+  grid=false,
+  % Column spacing
+  colspacing=1em,
+  % Color style
+  bgColorOne=white,
+  bgColorTwo=white,
+  borderColor=lightblue,
+  headerColorOne=black,
+  headerColorTwo=lightblue,
+  headerFontColor=white,
+  boxColorOne=white,
+  boxColorTwo=lightblue,
+  % Format of textbox
+  textborder=roundedleft,
+  % Format of text header
+  eyecatcher=true,
+  headerborder=closed,
+  headerheight=0.1\textheight,
+%  textfont=\sc, An example of changing the text font
+  headershape=roundedright,
+  headershade=shadelr,
+  headerfont=\Large\bf\textsc, %Sans Serif
+  textfont={\setlength{\parindent}{1.5em}},
+  boxshade=plain,
+%  background=shade-tb,
+  background=plain,
+  linewidth=2pt
+  }
+
+   % Title
+  {\bf{Adult observers' sensitivity to optic flow varies by pattern \& speed}\vspace{0.2em}}
+  % Authors
+  {William Adamiak, Amanda L. Thomas, Shivani M. Patel, \& Rick O. Gilmore \emph{(rogilmore@psu.edu)}\\ \vspace{0.2em}
+  VSS 2015 -- Poster 53.4022}
+  % University logo
+  {\includegraphics[height=5em]{img/psu-logo-700-319.jpg}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Now define the boxes that make up the poster
+%%%---------------------------------------------------------------------------
+%%% Each box has a name and can be placed absolutely or relatively.
+%%% The only inconvenience is that you can only specify a relative position 
+%%% towards an already declared box. So if you have a box attached to the 
+%%% bottom, one to the top and a third one which should be in between, you 
+%%% have to specify the top and bottom boxes before you specify the middle 
+%%% box.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  \headerbox{Motivation}{name=abstract,column=0,row=0}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
+    {
+      In adults, radial optic flow evokes stronger brain activity than laminar or rotational flow. 
+      Optic flow also evokes different brain activation patterns depending on flow type and motion speed (Fesi et al., 2014). 
+      This study examined whether the detection of optic flow in adult observers varies by flow type and speed in ways consistent with prior physiological evidence and with behavioral data from children (Joshi \& Falkenberg, 2015).
+    }
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  \headerbox{Acknowledgements}{name=thanks,column=0,below=abstract}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    {
+      This material is based upon work supported by the National Science Foundation under Grant Number BCS-1147440. Any opinions, findings, and conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily reflect the views of the National Science Foundation.
+    }
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  \headerbox{Method}{name=method,column=0,below=thanks, above=bottom}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    {
+      Adult observers (n=30; 18.7-23.9 years, \emph{M}=20.8, 16 female) participated for \$10 in compensation or course credit.
+      Observers judged which of two side-by-side optic flow displays contained coherent motion; they indicated their judgment by pressing a key on a computer keyboard.
+      Each run contained 5 blocks of 16 trials in which the side of presentation (left/right), flow pattern (radial/translational), and coherence (5, 10, 15, 20\%) were fulled crossed.
+      The speed of dot motion (2 or 8 deg/s) was constant within a block.
+      Between 2 and 4 runs were collected per participant in a single laboratory visit of less than 1 hour in duration. 
+      We analyzed proportion correct and response times using generalized linear mixed effects modeling in R using the \emph{glmer} command in the \emph{lme4} package.
+      We compared fit of models with different fixed and random effects, including random slope and intercept terms, using \(\chi^{2}\) tests. 
+      We report results from the best-fitting model that includes a single random intercept term.
+      One observer's data was eliminated from analysis due to failure to follow task instructions.
+    }
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%   \headerbox{Data Sharing}{name=sharing,column=0, below=method, above=bottom}
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%     {
+%       Movies of the displays, metadata about the participants, and raw data files are available at \\
+%       \url{http://databrary.org/volume/73}.
+%     }
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  \headerbox{Displays}{name=displays,column=1,row=0}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    {
+      Two optic flow patterns were presented simultaneously on the left and right sides of a central fixation point on a computer monitor positioned 60 cm from the viewer.
+      Each pattern had an annular shape with an 18 deg in outer diameter and 5 deg in inner diameter; Annulus centers were displaced 15 deg from the center of the display.
+      Optic flow was generated by random dot kinematograms with white dots (110 cd/m, 7 amin) presented on a black background.
+      In each trial, one display depicted random (0\% coherent) motion while the other depicted radial or translational motion varying between one of four fixed coherence levels (5, 10, 15 or 20\%) and 0\% at 1.2 Hz.
+      Displays terminated when the observer pressed a key or for a maximum of 10 s.
+      Here is a schematic of the display.
+
+      \vspace{3em}
+      \includegraphics[scale=0.30]{img/optic-flow-psychophysics-display.png}
+      \vspace{4em}
+    }
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  \headerbox{References}{name=references,column=1, below=displays, above=bottom}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    {
+      \smaller
+      \bibliographystyle{ieee}
+      \renewcommand{\section}[2]{\vskip 0.05em}
+        \begin{thebibliography}{1}\itemsep=-0.01em
+        \setlength{\baselineskip}{0.4em}
+        \bibitem{fesi14:mofo-moco}
+          J.F.~Fesi, A.L.~Thomas, \& R.O.~Gilmore. (2014).
+          \newblock {Cortical responses to optic flow and motion contrast across patterns and speeds.}
+          \newblock {\em Vision Research, 100}
+          \newblock {, 56-71.}
+        \bibitem{awf:tracking}
+          M.R.~Joshi \& H.K.~Falkenberg. (2015).
+    \newblock {Development of radial optic flow pattern sensitivity at different speeds.}
+          \newblock {\em Vision Research, 110}
+          \newblock {, 68-75.}
+        \end{thebibliography}
+     \vspace{0.3em}
+    }
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  \headerbox{Results}{name=results,column=2,span=2,row=0, bottomaligned=references}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    {
+      Coherence \(\chi^{2}(1)=1110.3, p<.0001\), pattern type \(\chi^{2}(1)=66.148, p<.0001\), cohererence by pattern type \(\chi^{2}(1)=69.879, p<.0001\), and speed \(\chi^{2}(1)=9.1834, p<.0024\) remained in the final model for proportion correct judgments. 
+      As coherence increased from 5 to 20\%, accuracy to detect radial flows increased from .55 to .98 and for translational flows from .59 to .89. 
+      We found comparable effects for reaction time.
+      % There were main effects of coherence \emph{F}(1,471)=423.42, \emph{p}<.0001 and pattern \emph{F}(1,471)=9.94, \emph{p}<.002 on proportion correct judgments and a pattern by coherence interaction \emph{F}(1,471)=19.48, \emph{p}<.0001. 
+      % For reaction time, there were main effects of coherence \emph{F}(1,455)=229.84, \emph{p}<.0001 and pattern \emph{F}(1,455)=10.55, \emph{p}<.0001, and a pattern by coherence interaction \emph{F}(1,455)=39.27, \emph{p}<.0001. 
+      Participants were \textbf{most accurate and fastest to detect slow radial flows}, and performance improved  rapidly as coherence increased.
+
+      \begin{center}
+        \includegraphics[scale=0.12]{img/pcorr.png}
+     
+        \includegraphics[scale=0.12]{img/rt.png}
+      \end{center}
+    }
+
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%   \headerbox{Future Directions}{name=future,column=1,aligned=references,above=bottom}
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%     {
+%       Taken together the results suggest that sensitivity to detect optic flow in noise varies by pattern type and speed in ways that partially map onto prior physiological results. 
+%     }
+
+
+\end{poster}
+
+\end{document}

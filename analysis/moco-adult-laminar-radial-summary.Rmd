@@ -1,0 +1,106 @@
+---
+title: "moco-adult-laminar-radial-summary"
+output: html_document
+---
+
+```{r}
+dts=format( Sys.time(), "%Y-%m-%d-%H%M%S")
+sprintf("Analysis conducted %s.", dts)
+```
+
+## Source functions & load packages
+```{r}
+source("bulk.import.convert.sessions.R")
+library(ggplot2)
+library(dplyr)
+```
+
+## Data importing and clean-up
+
+### Import and convert all data
+```{r}
+b <- bulk.import.convert.sessions()
+moco <- read.csv("../aggregate-data/adult-laminar-radial-grouped.csv")
+```
+
+### Convert some variables to more workable forms
+```{r}
+moco$SessionDate = as.Date( moco$SessionDate )
+moco$DegPSec = ordered( moco$DegPSec )
+moco$Acc = as.logical( moco$Acc )
+moco$ParticipantID = as.factor( moco$ParticipantID )
+```
+
+### Summarize imported data
+```{r}
+summary( moco )
+```
+
+### Convert to dplyr tableand generate some summaries
+```{r}
+tbl.moco <- tbl_df( moco )
+```
+
+### Plot P.Corr by Pattern and Speed
+```{r}
+tbl.p.corr <- tbl.moco %>%
+  group_by( DegPSec, PatternType, Coh, ParticipantID ) %>%
+  summarise( P.Corr=mean( Acc, na.rm=TRUE ), ntrials=n() )
+tbl.p.corr
+
+# Plot R by DegPSec and PatternType
+pl.p.corr <- ggplot( data=tbl.p.corr ) +
+  facet_grid( facets= DegPSec ~ PatternType ) +
+  geom_point( aes(x=Coh, y=P.Corr, color=ParticipantID ) ) +
+  geom_line( aes(x=Coh, y=P.Corr, group=ParticipantID, color=ParticipantID) )
+
+pl.p.corr
+
+dts=format( Sys.time(), "%Y-%m-%d-%H%M%S")
+fn=sprintf("%s/%s-%s.png", "../imgs", dts, "p.corr")
+ggsave( file=fn ) 
+```
+
+### Plot RT by Pattern & Speed
+```{r}
+tbl.rt <- tbl.moco %>%
+  group_by( DegPSec, PatternType, Coh, ParticipantID ) %>%
+  summarise( RT.mean=mean( RT, na.rm=TRUE ), 
+             RT.sem = sd(RT)/sqrt( n() ) )
+
+tbl.rt
+
+limits = aes( ymax = RT.mean + RT.sem, ymin = RT.mean - RT.sem, group=ParticipantID )
+
+pl.rt <- ggplot( data=tbl.rt, aes(x=Coh, y=RT.mean, group=ParticipantID, color=ParticipantID) ) +
+  facet_grid( facets = DegPSec ~ PatternType ) +
+  geom_line() +
+  geom_pointrange( limits )
+
+pl.rt
+
+dts=format( Sys.time(), "%Y-%m-%d-%H%M%S")
+fn=sprintf("%s/%s-%s.png", "../imgs", dts, "rt")
+ggsave( file=fn ) 
+
+```
+
+### Speed/Accuracy Trade-off
+```{r}
+tbl.by.sub <- tbl.moco %>%
+  group_by( DegPSec, PatternType, Coh, ParticipantID ) %>%
+  summarise( P.Corr = mean( Acc, na.rm=TRUE ), RT.mean=mean(RT, na.rm=TRUE), RT.sem=sd(RT, na.rm=TRUE)/sqrt(n()) )
+
+pl.speed.accuracy <- ggplot( tbl.by.sub ) +
+  geom_line( aes(x=P.Corr, y=RT.mean, shape=as.factor(Coh), color=ParticipantID, group=ParticipantID)) +
+  geom_pointrange( aes( x=P.Corr, y=RT.mean, ymax = RT.mean + RT.sem, ymin=RT.mean-RT.sem, group=ParticipantID, shape=as.factor(Coh), color=ParticipantID ) ) + 
+  facet_grid( facets = DegPSec ~ PatternType )
+
+pl.speed.accuracy
+
+dts=format( Sys.time(), "%Y-%m-%d-%H%M%S")
+fn=sprintf("%s/%s-%s.png", "../imgs", dts, "spd.acc")
+ggsave( file=fn ) 
+```
+
+Note possible steeper slope for slow (2 deg/s) laminar flows. Keep on the look out for this and analyze formally later.
