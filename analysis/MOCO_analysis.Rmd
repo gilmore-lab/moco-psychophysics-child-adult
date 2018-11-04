@@ -37,10 +37,13 @@ theme.custom <- theme(plot.title = element_text(size=16, face="bold"),
 
 Here we import the aggregate data file found in `analyses/data-aggregate/moco-beh-child.csv`, convert `AgeDays` to a categorical factor, `AgeYrs` (norminal) and 'Age' (ordinal), convert gender into 1 (female) and 2 (male). In this dataset, the NaN of Acc is fixed but the outliers are not cleaned up.
 
+file.exists("analysis/data/child/data-aggregate/moco-beh-child.csv")
+
 ```{r import-data}
 # Import child MOCO data, normalize
-df <- read.csv(file = "/analysis/data/child/data-aggregate/moco-beh-child.csv", header = TRUE)
-
+setwd("analysis/data/child/data-aggregate")
+df <- read.csv(file = "analysis/data/child/data-aggregate/moco-beh-child.csv", header = TRUE,sep=",")
+dfadult <- read.csv(file = "analysis/data/adult/adult-laminar-radial-grouped.csv", header = TRUE)
 
 # Convert age in days to years
 which(df$AgeDays< 5*365.25) # there is no child younger than 5 yrs
