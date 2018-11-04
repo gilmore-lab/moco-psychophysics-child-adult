@@ -423,6 +423,11 @@ AIC 5768
 
 ### Weibull function
 ```{r weibull-interaction, eval=FALSE}
+form.acc.weibull<- Acc ~ Coh + Speed + PatternType + Coh*Speed + Age*Coh +Age*Speed + Age*PatternType+Age*Gender+Gender*Coh + Gender*Speed + Gender*PatternType + (1|SubID)
+model.acc.weibull <- glmer(formula = form.acc.weibull, family=binomial(mafc.weib(2)), data = df2)
+summary(model.acc.weibull)
+```
+AIC 5734
 accfit <- fitdist(df.bysub.bycond$Pct.Corr,"weibull") # by conditions?
 accfit   # estimate
 weibull(,shape=9.3969663,scale=0.9412456)
@@ -431,7 +436,6 @@ family = mafc.weib( ... )
 # form.weibull.interaction<- Acc ~ Coh + Speed + PatternType + Coh*Speed*PatternType + (1|SubID)
 # model.weibull.interaction <- vglm(formula = form.weibull.interaction, family = weibull(link='log'), data = df)
 # summary(model.weibull.interaction)
-```
 
 
 ## Further examination for the models
@@ -650,16 +654,21 @@ summary(model.full.rt) #AIC 23411
 anova(model.full.rt, model.interaction.rt)
 anova(model.full.rt)
 ```
-## GLM 
+## GLMM
 ```{r check-function-fit}
 # qqp requires estimates of the parameters of the negative binomial, Poisson
 # and gamma distributions. You can generate estimates using the fitdistr
 # function. Save the output and extract the estimates of each parameter as I
 # have shown below.
 library(MASS)
-nbinom <- fitdistr(na.omit(df2$RT), "Negative Binomial") # a list of non-integer
-nbinom <- fitdistr(na.omit(df2$RT), "gamma") # a list of non-integer
-nbinom <- fitdistr(na.omit(df2$RT), "logistic")
+library(car)
+nbinom <- fitdistr(na.omit(df2$RT), "Negative Binomial") # like poisson, for discrete count distribution
+nbinom <- fitdistr(na.omit(df2$RT), "gamma") # bad fit
+nbinom <- fitdistr(na.omit(df2$RT), "logistic") # a discretized distribution
+nbinom <- fitdistr(na.omit(df2$RT), "normal") # bad fit
+nbinom <- fitdistr(na.omit(df2$RT), "lognormal") # worse than logistic
+nbinom <- fitdistr(na.omit(df2$RT), "log-normal") # similar to lognormal, we set the family to gaussian (another word for normal) and the link to log, family = gaussian(link = "log")
+nbinom <- fitdistr(na.omit(df2$RT), "weibull") # bad fit
 qqp(df2$RT, "nbinom", size = nbinom$estimate[[1]], mu = nbinom$estimate[[2]])
 # Check out the plots I've generated using qqp. The y axis represents the observations and the x axis represents the quantiles modeled by the distribution. The solid red line represents a perfect distribution fit and the dashed red lines are the confidence intervals of the perfect distribution fit. You want to pick the distribution for which the largest number of observations falls between the dashed lines. 
 ```
