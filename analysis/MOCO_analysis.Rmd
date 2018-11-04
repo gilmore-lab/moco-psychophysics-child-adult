@@ -41,9 +41,8 @@ file.exists("analysis/data/child/data-aggregate/moco-beh-child.csv")
 
 ```{r import-data}
 # Import child MOCO data, normalize
-setwd("analysis/data/child/data-aggregate")
-df <- read.csv(file = "analysis/data/child/data-aggregate/moco-beh-child.csv", header = TRUE,sep=",")
-dfadult <- read.csv(file = "analysis/data/adult/adult-laminar-radial-grouped.csv", header = TRUE)
+library(readr)
+df <- read_csv("/storage/home/y/yxq5055/R/moco-psychophysics-child-adult/analysis/data/child/data-aggregate/moco-beh-child.csv")
 
 # Convert age in days to years
 which(df$AgeDays< 5*365.25) # there is no child younger than 5 yrs
@@ -178,6 +177,7 @@ qqp(na.exclude(df2$RT), "nbinom", size = nbinom$estimate[[1]], mu = nbinom$estim
 gammad <- fitdistr(c(na.exclude(df2$RT)), "gamma")
 qqp(na.exclude(df2$RT), "gamma", shape = gammad$estimate[[1]], rate = gammad$estimate[[2]])
 ```
+
 ### plot of *p*(Corr) by subj
 ```{r p-corr-subj-mean-plot}
 # Plot theme, customizations 
@@ -243,7 +243,7 @@ p2
 
 ### Plot of *p*(corr) by condition
 ```{r p-corr-pattern-speed-plot, include=TRUE}
-
+y_lbl <- 'p(corr)'
 title_text <- 'p(corr) by Coherence, Pattern, and Speed'
 df.bysub.bycond$Speed <- factor(df.bysub.bycond$Speed, labels = c("2 deg/s", "8 deg/s"))
 
@@ -521,7 +521,7 @@ exp(confint(model.logit.interaction))
 <!-- exp(lodds)/(1+exp(lodds)) -->
 
 ## RT
-### Probit function
+### Fit Linear Mixed-Effects Models (LMM)
 #### Empty model
 ```{r probit-empty, eval=FALSE}
 form.empty.rt <- RT~(1|SubID)
@@ -540,7 +540,7 @@ summary(model.fixed.rt)
 ```
 AIC 26162
 
-### Gaussian model with random intercept
+### Gaussian lm model with random intercept
 ```{r rt-gaussian, eval=FALSE}
 # normalize to mean=0, sd=1
 RT.norm <- (df2$RT - mean(df2$RT,na.rm=T)) / sd(df2$RT,na.rm = T)
@@ -553,24 +553,25 @@ summary(model.fixed.rt2)
 ```
 AIC 23515
 
-# lmer is used to fit linear mixed-effect models, so it assumes that the residual error has a Gaussian distribution. test whether the residual error is gaussian distribution
+# lmer is used to fit linear mixed-effect models, which assumes that the residual error has a Gaussian distribution. Test whether the residual error is gaussian distribution
 
 ```{r model-diagnosis}
 rt.res <- resid(model.fixed.rt2) #Pearson residues
 rt.pred <- predict(model.fixed.rt2) # predicted
-rt.pred <- fitted(model.fixed.rt2) # predicted y values
+rt.fitted <- fitted(model.fixed.rt2) # predicted y values rt.pred=rt.pred
 
 # test the distribution of residuals
-plot(rt.res,    ylab="Residuals",  main="residual of the rt") 
-abline(0, 0) # the horizon
-hist(rt.res)
+plot(rt.res,    ylab="Residuals",  main="residual of the rt") #residual by index
+abline(0, 0) 
+
+hist(rt.res) # histogram of residuals
 
 qqnorm(rt.res, cex.main=0.9)
 qqline(rt.res)
-abline(0,0)
+abline(0,0)  ## qqplot of rt.res
 
 par(mfrow=c(2,2)) # init 4 charts in 1 panel
-plot(model.fixed.rt2)
+plot(model.fixed.rt2) # residual by predicted y value
 
 ModDiag<-NA
 ModDiag$fit <- fitted(model.fixed.rt2)
@@ -593,6 +594,7 @@ ggplot(ModDiagTall, aes(x=varVal, y=res)) +
   facet_wrap(~variable, scales="free_x") +
   theme_bw() +
   theme(strip.background = element_rect(fill = "White") )
+
 # test normality of residuals, that is heteroscedasticity
 shapiro.test(sample(rt.res,5000)) # sample size must be between 3 to 5000
 ks.test(rt.res,y='pnorm',alternative='two.sided') # it is not normal distribution
@@ -648,6 +650,20 @@ summary(model.full.rt) #AIC 23411
 anova(model.full.rt, model.interaction.rt)
 anova(model.full.rt)
 ```
+## GLM 
+```{r check-function-fit}
+# qqp requires estimates of the parameters of the negative binomial, Poisson
+# and gamma distributions. You can generate estimates using the fitdistr
+# function. Save the output and extract the estimates of each parameter as I
+# have shown below.
+library(MASS)
+nbinom <- fitdistr(na.omit(df2$RT), "Negative Binomial") # a list of non-integer
+nbinom <- fitdistr(na.omit(df2$RT), "gamma") # a list of non-integer
+nbinom <- fitdistr(na.omit(df2$RT), "logistic")
+qqp(df2$RT, "nbinom", size = nbinom$estimate[[1]], mu = nbinom$estimate[[2]])
+# Check out the plots I've generated using qqp. The y axis represents the observations and the x axis represents the quantiles modeled by the distribution. The solid red line represents a perfect distribution fit and the dashed red lines are the confidence intervals of the perfect distribution fit. You want to pick the distribution for which the largest number of observations falls between the dashed lines. 
+```
+
 ## survival function
 ```{r survival-function}
 library(survival)
