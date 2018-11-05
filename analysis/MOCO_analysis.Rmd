@@ -431,12 +431,18 @@ AIC 5734
 accfit <- fitdist(df.bysub.bycond$Pct.Corr,"weibull") # by conditions?
 accfit   # estimate
 weibull(,shape=9.3969663,scale=0.9412456)
-family = mafc.weib( ... )
+
+
 # library(VGAM)
 # form.weibull.interaction<- Acc ~ Coh + Speed + PatternType + Coh*Speed*PatternType + (1|SubID)
 # model.weibull.interaction <- vglm(formula = form.weibull.interaction, family = weibull(link='log'), data = df)
 # summary(model.weibull.interaction)
 
+```{r 95percent-CI}
+se <- sqrt(diag(vcov(model.acc.logit)))
+# table of estimates with 95% CI
+tab <- cbind(Est = fixef(model.acc.logit), LL = fixef(model.acc.logit) - 1.96 * se, UL = fixef(model.acc.logit) + 1.96 * se)
+```
 
 ## Further examination for the models
 ### obtain confidence intervals for the coefficient estimates
@@ -672,6 +678,7 @@ nbinom <- fitdistr(na.omit(df2$RT), "weibull") # bad fit
 qqp(df2$RT, "nbinom", size = nbinom$estimate[[1]], mu = nbinom$estimate[[2]])
 # Check out the plots I've generated using qqp. The y axis represents the observations and the x axis represents the quantiles modeled by the distribution. The solid red line represents a perfect distribution fit and the dashed red lines are the confidence intervals of the perfect distribution fit. You want to pick the distribution for which the largest number of observations falls between the dashed lines. 
 ```
+For a continuous outcome where we assume a normal distribution, the most common link function is simply the identity. It essentially drops out and we are back to our usual specification of means and variances for the normal distribution, which is the model used for typical linear mixed models. 
 
 ## survival function
 ```{r survival-function}
@@ -710,7 +717,17 @@ femaleRep
 cox.zph(femaleRep)
 ```
 
-
+##mixed effects cox models
+```{r mixed-effects-survival-model-RT}
+m <- coxph(survobj ~ Age + Sex + Speed+PatternType+Coh + cluster(SubID), 
+    data = df2)
+## summary of the model
+summary(m)
+# given repeated observations on individuals each individual likely has their own baseline so adjust with a mixed effects cox model using the coxme package
+m2 <- coxme(survobj ~ Age + Sex + Speed+PatternType+Coh + cluster(SubID), 
+    data = df2)
+m2
+```
 
 
 
