@@ -1,0 +1,36 @@
+---
+title: "Statistical consultant"
+author: "Yiming"
+date: "11/9/2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Thomas 323 10AM-11AM Nov 9, 2018
+
+http://stat.psu.edu/consulting/statistical-consulting-center
+
+1.	I use the GLMM model to analyze data in R. In the model with DV of accuracy, I set “ family=binomial(mafc.probit(2))”. What is the difference between binomial(mafc) and binomial?
+See this page https://www.rdocumentation.org/packages/psyphy/versions/0.1-9/topics/mafc . Macf is said to be a kind of psychophysical functions, which might be of interests in your field. Without binomial, it is just the regular logistic linear mixed model regression.
+
+2.	In the above model, I found if there is random slope of coherence, speed or pattern, there is better model fit than model without random slope. But what is its interpretation?
+I do not need to use it, it is too complicated.
+
+3.	When I included the interactions in my model, it showed “Model failed to converge with max|grad| = 0.0326501 (tol = 0.001, component 1)”. Does this affect my outcome? How can I solve this converge problem?
+Try a different optimizer, if the coefficient of the variable does not change a lot. Your previous converge is reliable.
+
+4.	In the model with DV of accuracy, I used “lmer” but found the residual of this model violated the assumption of normality.
+What shall I do next? How can I find the best fitting model in this case? Is there GLMM for continuous DV?
+For continuous variables, you don’t have to use GLMM. You can just use LMM, which stands for linear mixed model. If the residuals violated the assumption, you can try transformations on either the DV or the IVs. (log) In the GLMM (family=guassian), it is equal to linear mixed model.
+
+5.	I want to use the mixed effect survival model to do further examination. How can I do it?
+This page is very helpful to run a survival regression with mixed effects: https://cran.r-project.org/web/packages/coxme/vignettes/coxme.pdf. Also this one https://stats.idre.ucla.edu/r/dae/mixed-effects-cox-regression/
+Your model surv(0, TR,Acc) does not make sense? What is the paper using this model?
+
+6.	How to calculate the effect size for my fixed variables?
+Coefficient
+
+
