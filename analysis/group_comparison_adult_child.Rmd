@@ -128,8 +128,9 @@ nd2 <- nd %>%
          RT.pred.mean=mean(rt.pred),
          RT.pred.se=sd(rt.pred)/sqrt(length(rt.pred)))
 # df.bygender.bycond$Speed<-factor(df.bygender.bycond$Speed)
-
-# Plot of extual and predicted ACC
+```
+```{r plot-acc}
+# Plot of ectual and predicted ACC
 title_text <- 'Percentage of correct responses by Coherence, Pattern, and Speed'
 pic.acc<-ggplot(data=df.bygroup.bycond, aes(x=Coh, y=pcorr.mean, color=group)) +
   geom_point(aes(group=group, color=group),size=2) +
@@ -139,14 +140,16 @@ pic.acc<-ggplot(data=df.bygroup.bycond, aes(x=Coh, y=pcorr.mean, color=group)) +
   ggtitle(title_text) +
   scale_colour_hue(name="participant gender",    #Legend label, use darker colors
                       breaks=c("Female", "Male"),
-                     labels=c("Female", "Male"))+
+                      labels=c("Female", "Male"))+
   theme_bw() +
   theme.custom +
   xlim(0.05, 0.6) +
   geom_hline(yintercept=0.5, linetype="dashed")
 
 pic.acc
+```
 
+```{r plot-rt}
 # Plot of extual and predicted ACC
 title_text <- 'Reaction Times by Coherence, Pattern, and Speed'
 pic.rt<-ggplot(data=df.bygroup.bycond, aes(x=Coh, y=RT.mean.mean, color=group)) +
