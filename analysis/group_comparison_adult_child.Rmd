@@ -1,0 +1,166 @@
+---
+title: "group_comparision_adult_child"
+author: "Yiming"
+date: "11/12/2018"
+output: pdf_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lme4)
+library(knitr)
+library(psyphy)
+library(sjPlot)
+library(dplyr)
+library(ggplot2)
+# if (!("pacman" %in% installed.packages()[,])) {
+#     install.packages("pacman")
+#   }
+# library(pacman)
+# pacman::p_load(dplyr, ggplot2, knitr, psyphy, lme4, sjPlot)
+```
+
+```{r ggplot-themes}
+theme.custom <- theme(plot.title = element_text(size=16, face="bold"),
+                      axis.title.x = element_text(size=14),
+                      axis.title.y = element_text(size=14),
+                      strip.text = element_text(size=14),
+                      axis.text = element_text(size=11),
+                      legend.position="bottom", 
+                      legend.title=element_blank(),
+                      legend.text=element_text(size=11))
+```
+
+# create the combined files
+```{r load-files}
+df_child <- read.csv(file = "~/moco-psychophysics-child-adult/analysis/data/moco-child.csv", header = TRUE,sep=",")
+df_adult <- read.csv(file = "~/moco-psychophysics-child-adult/analysis/data/moco-adult.csv", header = TRUE)
+df_adult$Speed <- factor(df_adult$Speed, labels = c("2deg/s", "8deg/s"))
+df_child$Speed <- factor(df_child$Speed, labels = c("2deg/s", "8deg/s"))
+df_child2 <- df_child %>%
+   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh)
+df_adult2 <- df_adult %>%
+   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh)
+df<-bind_rows(df_child2, df_adult2) 
+df<- df %>%
+  mutate(group=c(rep('child',nrow(df_child2)),rep('adult',nrow(df_adult2))))
+```
+
+# Accuracy group comparison
+```{r acc-logit-initial, eval=FALSE}
+form.acc.logit1<- Acc ~ Gender + Coh + Speed + PatternType + group + Coh*PatternType*Speed + (1|SubID) 
+model.acc.logit1 <- glmer(formula = form.acc.logit1, family=binomial(mafc.logit(2)), data = df)
+summary(model.acc.logit1)
+```
+```{r acc-logit-full, eval=FALSE}
+form.acc.logit2<- Acc ~ Gender + Coh + Speed + group + Coh*PatternType+ Coh*Speed+group*Coh+group*PatternType+group*Speed+ (1|SubID) 
+model.acc.logit2 <- glmer(formula = form.acc.logit2, family=binomial(mafc.logit(2)), data = df)
+summary(model.acc.logit2)
+```
+
+#### Rt group comparison
+```{r rt-initial, eval=FALSE}
+form.fixed.rt <- RT~ Coh + Speed + PatternType + (1|SubID)
+model.fixed.rt <- lmer(formula = form.fixed.rt, data = df, REML=FALSE)
+summary(model.fixed.rt)
+```
+```{r rt-log-initial, eval=FALSE}
+form.fixed.rt1 <- log(RT)~ Coh + Speed + PatternType + (1|SubID)
+model.fixed.rt1 <- lmer(formula = form.fixed.rt1, data = df, REML=FALSE)
+summary(model.fixed.rt1)
+```
+```{r rt-log-full, eval=FALSE}
+form.fixed.rt2 <- log(RT)~ Coh + Speed + PatternType + Coh*PatternType*Speed + Coh*Speed+group*Coh+group*PatternType+group*Speed + (1|SubID)
+model.fixed.rt2 <- lmer(formula = form.fixed.rt2, data = df, REML=FALSE)
+summary(model.fixed.rt2)
+car::Anova(model.fixed.rt2)
+```
+
+### Plot of actual  *p*(corr) and predicted *p*(corr) by condition
+```{r p-corr-pattern-speed-plot-final, include=TRUE}
+df_child3 <- df_child %>%
+  filter(Group=="linear-radial coh [.15 .3 .45 .6]") %>%
+   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh)
+df_adult2 <- df_adult %>%
+   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh)
+df2<-bind_rows(df_child3, df_adult2) 
+df2<- df2 %>%
+  mutate(group=c(rep('child',nrow(df_child3)),rep('adult',nrow(df_adult2))))
+
+df2 %>% 
+  group_by(SubID, group, PatternType, Coh, Speed) %>% 
+  summarize(N.corr = sum(Acc), 
+            N.tot = n(), 
+            Pct.Corr = N.corr/N.tot,
+            RT.mean=mean(RT, na.rm = T),
+            RT.sd=sd(RT, na.rm = T)) -> 
+  df.summary
+df.summary %>% 
+  group_by( group,Coh,Speed,PatternType) %>% 
+  summarize(pcorr.mean=mean(Pct.Corr),
+         pcorr.sd=sd(Pct.Corr),
+         RT.mean.mean=mean(RT.mean),
+         RT.mean.sd=sd(RT.mean)) -> 
+  df.bygroup.bycond
+# add fitted line
+xseq<-seq(0.05,0.6,len=100)
+df.summary$id<-with(df.summary,interaction(Speed, PatternType, group, SubID))
+nd<-data.frame(rep(xseq,8*54),id=rep(levels(df.summary$id),each=100))
+# levels(nd$id)<-levels(df.bysub.byage.bycond$id)
+mm <-matrix(unlist(strsplit(as.character(nd$id),"[.]")), ncol=4,byrow=TRUE)
+nd$Speed<-gsub("[[:space:]]", "",factor(mm[,1]))
+nd$PatternType<-factor(mm[,2])
+nd$group<-factor(mm[,3])
+nd$SubID<-factor(mm[,4])
+colnames(nd)[1] <- "Coh"
+
+model.acc.logit.dropgender <- update(model.acc.logit2, . ~ . - Gender)
+nd$acc.pred<-predict(model.acc.logit.dropgender,newdata=nd,type="response",se.fit=TRUE) # obtain predicted values
+model.fixed.rt.dropgender <- update(model.fixed.rt2, . ~ . - Gender)
+nd$rt.pred<-exp(predict(model.fixed.rt.dropgender,newdata=nd, type="response", se.fit=TRUE)) # obtain predicted values
+
+nd2 <- nd %>%
+  group_by(group, Speed,Coh, PatternType) %>%
+  summarize(acc.pred.mean=mean(acc.pred),
+         acc.pred.se=sd(acc.pred)/sqrt(length(acc.pred)),
+         RT.pred.mean=mean(rt.pred),
+         RT.pred.se=sd(rt.pred)/sqrt(length(rt.pred)))
+# df.bygender.bycond$Speed<-factor(df.bygender.bycond$Speed)
+
+# Plot of extual and predicted ACC
+title_text <- 'Percentage of correct responses by Coherence, Pattern, and Speed'
+pic.acc<-ggplot(data=df.bygroup.bycond, aes(x=Coh, y=pcorr.mean, color=group)) +
+  geom_point(aes(group=group, color=group),size=2) +
+  geom_line(data=nd2, aes(x=Coh,y=acc.pred.mean, group=group, color=group),size=1) +
+  facet_grid(facets = Speed ~ PatternType) +
+  labs(x="Coherence (%)", y="Percentage of Accuracy") +
+  ggtitle(title_text) +
+  scale_colour_hue(name="participant gender",    #Legend label, use darker colors
+                      breaks=c("Female", "Male"),
+                     labels=c("Female", "Male"))+
+  theme_bw() +
+  theme.custom +
+  xlim(0.05, 0.6) +
+  geom_hline(yintercept=0.5, linetype="dashed")
+
+pic.acc
+
+# Plot of extual and predicted ACC
+title_text <- 'Reaction Times by Coherence, Pattern, and Speed'
+pic.rt<-ggplot(data=df.bygroup.bycond, aes(x=Coh, y=RT.mean.mean, color=group)) +
+  geom_point(aes(group=group, color=group),size=2) +
+  geom_line(data=nd2, aes(x=Coh,y=RT.pred.mean, group=group, color=group),size=1) +
+  facet_grid(facets = Speed ~ PatternType) +
+  labs(x="Coherence (%)", y="Reaction times (s)") +
+  ggtitle(title_text) +
+  scale_colour_hue(name="group",    #Legend label, use darker colors
+                      breaks=c("child", "adult"),
+                     labels=c("Child", "Adult"))+
+  theme_bw() +
+  theme.custom +
+  xlim(0.05, 0.6) 
+
+pic.rt
+```

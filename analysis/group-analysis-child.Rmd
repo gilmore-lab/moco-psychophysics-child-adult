@@ -100,7 +100,7 @@ Here we import the aggregate data file found in `analyses/data-aggregate/moco-be
 ```{r import-data}
 # Import child data, normalize
 
-df <- read.csv(file = "analyses/data-aggregate/moco-beh-child.csv", header = TRUE)
+df <- read.csv(file = "analysis/data-aggregate/moco-beh-child.csv", header = TRUE)
 
 # Convert age in days to years
 df$AgeYrs <- ordered(cut(df$AgeDays/365.25, 

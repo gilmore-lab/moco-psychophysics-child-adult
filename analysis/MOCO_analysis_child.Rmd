@@ -41,7 +41,7 @@ file.exists("analysis/data/child/data-aggregate/moco-beh-child.csv")
 
 ```{r import-data}
 # Import child MOCO data, normalize
-df <- read.csv(file = "~/moco-psychophysics-child-adult/analysis/data/child/data-aggregate/moco-beh-child.csv", header = TRUE,sep=",")
+
 # dfadult <- read.csv(file = "analysis/data/adult/adult-laminar-radial-grouped.csv", header = TRUE)
 
 # Convert age in days to years
