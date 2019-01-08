@@ -7,14 +7,15 @@ output: pdf_document
 
 
 ```{r setup, include=FALSE}
+library(knitr)
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(lme4)
-library(knitr)
 library(psyphy)
 library(sjPlot)
 library(dplyr)
 library(ggplot2)
+library(lmSupport)
 # if (!("pacman" %in% installed.packages()[,])) {
 #     install.packages("pacman")
 #   }
@@ -46,6 +47,20 @@ df_adult2 <- df_adult %>%
 df<-bind_rows(df_child2, df_adult2) 
 df<- df %>%
   mutate(group=c(rep('child',nrow(df_child2)),rep('adult',nrow(df_adult2))))
+write.csv(df, file = "CombinedData.csv")
+```
+
+```{r load-data}
+df <- read.csv(file="CombinedData.csv", header=TRUE, sep=",")
+
+df %>% 
+  group_by(Gender, group, SubID, PatternType, Speed, Coh) %>% 
+  summarize(N.corr = sum(Acc), 
+            N.tot = n(), 
+            Pct.Corr = N.corr/N.tot,
+            RT.mean=mean(RT, na.rm = T),
+            RT.sd=sd(RT, na.rm = T)) -> 
+  df3
 ```
 
 # Accuracy group comparison
@@ -58,6 +73,74 @@ summary(model.acc.logit1)
 form.acc.logit2<- Acc ~ Gender + Coh + Speed + group + Coh*PatternType+ Coh*Speed+group*Coh+group*PatternType+group*Speed+ (1|SubID) 
 model.acc.logit2 <- glmer(formula = form.acc.logit2, family=binomial(mafc.logit(2)), data = df)
 summary(model.acc.logit2)
+car::Anova(model.acc.logit2)
+```
+
+# effect size
+``` {r acc-effect-size}
+# This is not the effect size in GLM model
+effsize::cohen.d(Pct.Corr~group,data=df3,paired=F)  # df3 and df4 makes a large difference, which shall I choose?
+effsize::cohen.d(Pct.Corr~Gender,data=df4,paired=F)
+
+
+# calculate effect size in GLM
+library('pwr')
+compute.es::chies(50.40, 59)
+modelEffectSizes(model.acc.logit2 ) 
+
+modelSummary(model.acc.logit2)
+form.rt <- log(RT)~ Coh + Speed + PatternType + group + Coh*PatternType+group*Speed + (1|SubID)
+model.rt <- lmer(formula = form.rt, data = df)
+modelSummary(model.fixed.rt2)
+```
+
+``` {r mean-sd}
+df %>% 
+  group_by(Gender, group, SubID) %>% 
+  summarize(N.corr = sum(Acc), 
+            N.tot = n(), 
+            Pct.Corr = N.corr/N.tot,
+            RT.mean=mean(RT, na.rm = T),
+            RT.sd=sd(RT, na.rm = T)) -> 
+  df4
+df.bysub.bycond <- df4 %>%
+  group_by(group) %>%
+  summarise(pcorr.mean=mean(Pct.Corr),
+         pcorr.sd=sd(Pct.Corr),
+         RT.mean.mean=mean(RT.mean),
+         RT.mean.sd=sd(RT.mean) )
+
+df.bysub.bycond <- df4 %>%
+  group_by(Gender) %>%
+  summarise(pcorr.mean=mean(Pct.Corr),
+         pcorr.sd=sd(Pct.Corr),
+         RT.mean.mean=mean(RT.mean),
+         RT.mean.sd=sd(RT.mean) )
+df.bysub.bycond
+
+df.bysub.bycond <- df3 %>%
+  group_by(Speed) %>%
+  summarise(pcorr.mean=mean(Pct.Corr),
+         pcorr.sd=sd(Pct.Corr),
+         RT.mean.mean=mean(RT.mean),
+         RT.mean.sd=sd(RT.mean) )
+df.bysub.bycond
+
+df.bysub.bycond <- df3 %>%
+  group_by(PatternType) %>%
+  summarise(pcorr.mean=mean(Pct.Corr),
+         pcorr.sd=sd(Pct.Corr),
+         RT.mean.mean=mean(RT.mean),
+         RT.mean.sd=sd(RT.mean) )
+df.bysub.bycond
+
+df.bysub.bycond <- df3 %>%
+  group_by(Coh) %>%
+  summarise(pcorr.mean=mean(Pct.Corr),
+         pcorr.sd=sd(Pct.Corr),
+         RT.mean.mean=mean(RT.mean),
+         RT.mean.sd=sd(RT.mean) )
+df.bysub.bycond
 ```
 
 #### Rt group comparison
@@ -72,8 +155,9 @@ model.fixed.rt1 <- lmer(formula = form.fixed.rt1, data = df, REML=FALSE)
 summary(model.fixed.rt1)
 ```
 ```{r rt-log-full, eval=FALSE}
-form.fixed.rt2 <- log(RT)~ Coh + Speed + PatternType + Coh*PatternType*Speed + Coh*Speed+group*Coh+group*PatternType+group*Speed + (1|SubID)
+form.fixed.rt2 <- log(RT)~ Gender+ Coh + Speed + PatternType + Coh*PatternType*Speed + Coh*Speed+group*Coh+group*PatternType+group*Speed + (1|SubID)
 model.fixed.rt2 <- lmer(formula = form.fixed.rt2, data = df, REML=FALSE)
+
 summary(model.fixed.rt2)
 car::Anova(model.fixed.rt2)
 ```
@@ -166,4 +250,116 @@ pic.rt<-ggplot(data=df.bygroup.bycond, aes(x=Coh, y=RT.mean.mean, color=group)) 
   xlim(0.05, 0.6) 
 
 pic.rt
+```
+
+```{r 15%-coherence-comparsion}
+df_child3 <- df_child %>%
+   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh)%>%
+   dplyr::filter(Coh==0.15)
+df_adult3 <- df_adult %>%
+   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh)%>%
+   dplyr::filter(Coh==0.15)
+df1<-bind_rows(df_child3, df_adult3) 
+df1<- df1 %>%
+  mutate(group=c(rep('child',nrow(df_child3)),rep('adult',nrow(df_adult3))))
+```
+``` {r rt}
+form.coh.rt <- RT~ group + Gender+ Speed + PatternType + (1|SubID)
+model.coh.rt <- lmer(formula = form.coh.rt, data = df1, REML=FALSE)
+summary(model.coh.rt)
+car::Anova(model.coh.rt)
+form.coh.rt1 <- RT~ group + Speed + PatternType + group*Speed + group*PatternType + Speed * PatternType + (1|SubID)
+model.coh.rt1 <- lmer(formula = form.coh.rt1, data = df1, REML=FALSE)
+summary(model.coh.rt1)
+car::Anova(model.coh.rt1)
+```
+
+``` {r acc}
+form.coh.acc1 <- Acc~ group + Speed + Gender + PatternType + group*Speed + group*PatternType + Speed * PatternType + (1|SubID)
+model.coh.acc1 <- lmer(formula = form.coh.acc1, data = df1, REML=FALSE)
+summary(model.coh.acc1)
+car::Anova(model.coh.acc1)
+```
+
+
+``` {r SDT}
+library(psycho)
+# Let's simulate three participants with different results at a perceptual detection task
+df_child4 <- df_child %>%
+   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Response)%>%
+   dplyr::filter(Coh==0.15)
+df_adult4 <- df_adult %>%
+   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Response)%>%
+   dplyr::filter(Coh==0.15)
+df2<-bind_rows(df_child4, df_adult4) 
+df.sdt<- df2 %>%
+  mutate(group=c(rep('child',nrow(df_child4)),rep('adult',nrow(df_adult4)))) %>%
+  group_by(SubID, group, Coh, PatternType, Speed, Gender) %>%
+  summarize(n_hit = sum(Response=="L" & Acc=="TRUE", na.rm=T),
+            n_fa  = sum(Response=="L" & Acc=="FALSE", na.rm=T),
+            n_miss = sum(Response=="R" & Acc=="FALSE", na.rm=T),
+            n_cr = sum(Response=="R" & Acc=="TRUE", na.rm=T))
+
+indices <- neuropsychology::dprime(df.sdt$n_hit, df.sdt$n_fa, df.sdt$n_miss, df.sdt$n_cr)
+df.new <- cbind(df.sdt, indices)
+```
+
+``` {r anova-SDT}
+aov <- with(df.new, aov(dprime ~ Speed * PatternType * group * Gender +
+                       Error(SubID / (Speed * PatternType)))
+)
+summary(aov)
+aov <- with(df.new, aov(dprime ~ Speed + PatternType + group + Gender +
+                       Error(SubID / (Speed + PatternType)))
+)
+summary(aov)
+# sum sq = 138.83
+aov_c <- with(df.new, aov(c ~ Speed + PatternType + group + Gender +
+                       Error(SubID / (Speed + PatternType)))
+)
+summary(aov_c)
+# sum sq 6.396
+```
+
+``` {r anova-plot}
+myData <- aggregate(df.new$dprime,
+    by = list(PatternType = df.new$PatternType, Gender = df.new$Gender),
+    FUN = function(x) c(mean = mean(x), sd = sd(x),
+                        n = length(x)))
+myData <- do.call(data.frame, myData)
+myData$se <- myData$x.sd / sqrt(myData$x.n)
+ggplot(myData, aes(x=PatternType, y=x.mean, group=Gender, fill=Gender)) + 
+  geom_bar(stat="identity",  
+           position=position_dodge()) +
+  geom_errorbar(aes(ymin=x.mean-se, ymax=x.mean+se), width=.2,position=position_dodge(.9))  + 
+  labs( y = "Sensitivity (d')")+
+   theme_classic()
+
+myData <- aggregate(df.new$dprime,
+    by = list(PatternType = df.new$PatternType, Speed = df.new$Speed),
+    FUN = function(x) c(mean = mean(x), sd = sd(x),
+                        n = length(x)))
+myData <- do.call(data.frame, myData)
+myData$se <- myData$x.sd / sqrt(myData$x.n)
+myData$Speed<-factor(myData$Speed, levels=c("2","8"),labels= c("2 deg/sec","8 deg/sec"))
+ggplot(myData, aes(x=PatternType, y=x.mean, group=Speed, fill=Speed)) + 
+  geom_bar(stat="identity",  
+           position=position_dodge()) +
+  geom_errorbar(aes(ymin=x.mean-se, ymax=x.mean+se), width=.2,position=position_dodge(.9))  + 
+  labs( y = "Sensitivity (d')")+
+   theme_classic()
+
+myData <- aggregate(df.new$c,
+    by = list(Speed = df.new$Speed, Gender = df.new$Gender),
+    FUN = function(x) c(mean = mean(x), sd = sd(x),
+                        n = length(x)))
+myData <- do.call(data.frame, myData)
+myData$se <- myData$x.sd / sqrt(myData$x.n)
+myData$Speed<-factor(myData$Speed, levels=c("2","8"),labels= c("2 deg/sec","8 deg/sec"))
+ggplot(myData, aes(x=Speed, y=x.mean, group=Gender, fill=Gender)) + 
+  geom_bar(stat="identity",  
+           position=position_dodge()) +
+  geom_errorbar(aes(ymin=x.mean-se, ymax=x.mean+se), width=.2,position=position_dodge(.9))  + 
+  labs( y = "Response bias (c)", x = "Speed")+
+   theme_classic()
 ```

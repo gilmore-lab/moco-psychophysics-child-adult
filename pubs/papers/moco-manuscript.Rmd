@@ -73,11 +73,16 @@ Visual Cognition
 Perception
 
 
-
 ## Introduction
+Optic flow provides a strong source of information about observer self-motion [@warren2004optic].
+
+There is a large boby of literature and studies on optic flow in adults. 
+
+However, there is little literature about the development of visual motion. 
+
+Therefore, in this study, 
 
 ## Methods {#methods}
-
 ### Participants
 A total of 31 children between 5.2 and 8.6 years old (12 male, 19  female; mean age: 6.7 years ±1.0 years)) and 30 adults participated between 18.7 and 23.9 (14 male, 16 female; mean age: 20.8 years ± years ) participated in the study. The sample consisted of children drawn from a database of families in Centre County, Pennsylvania. Children were excluded if they were born prematurely, had a history of serious visual or medical problems, epilepsy, or seizures. One participant's data (1045) was excluded due to incomplete data collection. Adults participants consisted of young adults recruited from the undergraduate psychology subject pool at the Pennsylvania State University. One participant (14)’s data was removed from analysis for failure to follow task instructions. Resulting in 29 adults (14 male, 15 female; age range: X; mean age: X years, SD = X) utilized for analysis.
 
@@ -112,4 +117,16 @@ There are several limitations in this study. First, although we controled to man
 
 ## Conclusion
 
-## Reference
+<!-- This is a LaTex command -->
+\newpage
+
+# References
+
+```{r create_r-references}
+r_refs(file = "r-references.bib")
+```
+
+<!-- This is also LaTex code -->
+\setlength{\parindent}{-0.5in}
+\setlength{\leftskip}{0.5in}
+

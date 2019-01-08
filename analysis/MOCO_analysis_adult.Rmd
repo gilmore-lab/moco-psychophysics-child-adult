@@ -605,10 +605,10 @@ car::Anova(model.log.rt)
 ```
 
 ```{r rt-interaction-full, eval=FALSE}
-form.log.rt2<- log(RT) ~  Coh+ PatternType + PatternType*Coh+Coh*Speed+ (1|SubID)
+form.log.rt2<- log(RT) ~  Gender+Coh+ PatternType +Speed+ PatternType*Coh+Coh*Speed+ (1|SubID)
 model.log.rt2 <- lmer(formula = form.log.rt2, data = df2, REML=FALSE)
-summary(model.log.rt2) #AIC 8858
-Anova(model.log.rt2) # in package car
+summary(model.log.rt2) #AIC 14131
+car::Anova(model.log.rt2) # in package car
 anova(model.log.rt, model.log.rt2)
 ```
 ```{r model-diagnosis}
@@ -653,29 +653,6 @@ ggplot(data.frame(lev=hatvalues(model.fixed.rt2),pearson=residuals(model.fixed.r
 # rownames(mmLevCD) <- names(fixef(mmLev))
 # mmLevCD$multiples <- abs(mmLevCD$change / mmLevCD$se)
 # mmLevCD
-```
-#### Gaussian model with random slope:age
-```{r rt-gaussian-age, eval=FALSE}
-form.random.age <- RT.norm ~ Coh + Speed + PatternType + Gender + Age + (Age|SubID)
-model.random.age <- lmer(formula = form.random.age, data = df2, REML=FALSE)
-summary(model.random.age)
-```
-AIC 23514
-
-#### Gaussian model with random slope: gender
-```{r rt-gaussian-gender, eval=FALSE}
-form.random.gender<- RT.norm ~ Coh + Speed + PatternType  + (Gender|SubID)
-model.random.gender <- lmer(formula = form.random.gender, data = df2, REML=FALSE)
-summary(model.random.gender)
-anova(model.random.gender,model.fixed.rt2)
-```
-AIC 23519 No significant difference
-
-### Gaussian model with interaction
-```{r rt-gaussian-interaction, eval=FALSE}
-form.interaction.rt<- RT.norm ~ Coh + Speed + PatternType  + Age+ Gender + Coh*Speed*PatternType+ (1|SubID)
-model.interaction.rt <- lmer(formula = form.interaction.rt, data = df2, REML=FALSE)
-summary(model.interaction.rt) #AIC 23507
 ```
 
 ```
@@ -1137,16 +1114,16 @@ pic.acc<-ggplot(data=df.bygender.bycond, aes(x=Coh, y=pcorr.mean, color=Gender))
 pic.acc
 
 # Plot of extual and predicted ACC
-title_text <- 'Reaction Times by Coherence, Pattern, and Speed'
+title_text <- 'Reaction Times by Coherence, Pattern, and Speed in adult participants'
 pic.rt<-ggplot(data=df.bygender.bycond, aes(x=Coh, y=RT.mean.mean, color=Gender)) +
   geom_point(aes(group=Gender, color=Gender),size=2) +
   geom_line(data=nd2, aes(x=Coh,y=RT.pred.mean, group=Gender, color=Gender),size=1) +
   facet_grid(facets = Speed ~ PatternType) +
   labs(x="Coherence (%)", y="Reaction times (s)") +
   ggtitle(title_text) +
-  scale_colour_hue(name="participant Age",    #Legend label, use darker colors
-                      breaks=c("5", "6", "7", "8"),
-                     labels=c("5 year old", "6 year old","7 year old","8 year old"))+
+  scale_colour_hue(name="participant gender",    #Legend label, use darker colors
+                     breaks=c("Female", "Male"),
+                     labels=c("Female", "Male"))+
   theme_bw() +
   theme.custom +
   xlim(0.05, 0.2) +
