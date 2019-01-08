@@ -85,13 +85,18 @@ effsize::cohen.d(Pct.Corr~Gender,data=df4,paired=F)
 
 # calculate effect size in GLM
 library('pwr')
-compute.es::chies(50.40, 59)
-modelEffectSizes(model.acc.logit2 ) 
+compute.es::chies(50.40, 59) # do not work
+modelEffectSizes(model.acc.logit2 )  # do not work
 
 modelSummary(model.acc.logit2)
 form.rt <- log(RT)~ Coh + Speed + PatternType + group + Coh*PatternType+group*Speed + (1|SubID)
 model.rt <- lmer(formula = form.rt, data = df)
-modelSummary(model.fixed.rt2)
+modelSummary(model.fixed.rt2) # for this complex model, it requires lots of memory (Error: cannot allocate vector of size 2.6 Gb)
+
+# odd ratios
+exp(cbind(OR=coef(model.acc.logit2)$SubID[1,],confint(model.acc.logit2)$SubID[1,]))
+
+exp(coef(model.rt))
 ```
 
 ``` {r mean-sd}
