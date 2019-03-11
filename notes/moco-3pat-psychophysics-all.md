@@ -94,7 +94,7 @@ Choose which input device will be used for the experiment.
 7. Choose which display is exhibiting motion coherence by pressing the **lkey** for the left or the **rkey** key for the right
 8. Repeat steps 4-7 until the program ends
 
-![Moco Psychophysics Sample Display](../imgs/sample-display-small.jpg)
+![Moco Psychophysics Sample Display](../imgs/sample-display.png)
 
 ## Response Keys
 |code name| keyboard    | USB 12 button gamepad| Description            | 
