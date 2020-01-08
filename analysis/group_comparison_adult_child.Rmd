@@ -33,13 +33,33 @@ theme.custom <- theme(plot.title = element_text(size=16, face="bold"),
                       legend.title=element_blank(),
                       legend.text=element_text(size=11))
 ```
+# load data
+```{r load-files}
+df_c <- read.csv(file = "~/Documents/github/moco-psychophysics-child-adult/analysis/data/child/data-aggregate/moco-beh-child.csv", header = TRUE)
+df_a <- read.csv(file = "~/Documents/github/moco-psychophysics-child-adult/analysis/data/adult/adult-laminar-radial-grouped.csv", header = TRUE)
+```
+# get demographic information
+```{r get-demographic-info}
+df_c2 <- df_c%>%
+   dplyr::group_by(SubID, Gender)%>%
+   summarize(n=n(),
+             Acc_mean=mean(Acc))
+df_a2 <- df_a %>%
+   dplyr::group_by(ParticipantID, Gender, Race, Ethnicity)%>%
+   summarize(n=n(),
+             Acc_mean=mean(Acc))
+# 14 has below 50% accuracy, delete
+df_a2<-df_a2[-c(14),]
+table(df_a2$Gender)
+table(df_a2$Race)
+```
 
 # create the combined files
 ```{r load-files}
-df_child <- read.csv(file = "~/moco-psychophysics-child-adult/analysis/data/moco-child.csv", header = TRUE,sep=",")
-df_adult <- read.csv(file = "~/moco-psychophysics-child-adult/analysis/data/moco-adult.csv", header = TRUE)
-df_adult$Speed <- factor(df_adult$Speed, labels = c("2deg/s", "8deg/s"))
-df_child$Speed <- factor(df_child$Speed, labels = c("2deg/s", "8deg/s"))
+df_child <- read.csv(file = "~/Documents/github/moco-psychophysics-child-adult/analysis/data/moco-child.csv", header = TRUE)
+df_adult <- read.csv(file = "~/Documents/github/moco-psychophysics-child-adult/analysis/data/moco-adult.csv", header = TRUE)
+df_adult$Speed <- factor(df_adult$Speed, labels = c("2 deg/s", "8 deg/s"))
+df_child$Speed <- factor(df_child$Speed, labels = c("2 deg/s", "8 deg/s"))
 df_child2 <- df_child %>%
    dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh)
 df_adult2 <- df_adult %>%

@@ -41,8 +41,8 @@ file.exists("analysis/data/child/data-aggregate/moco-beh-child.csv")
 
 ```{r import-data}
 # Import child MOCO data, normalize
-
-# dfadult <- read.csv(file = "analysis/data/adult/adult-laminar-radial-grouped.csv", header = TRUE)
+setwd("~/analysis/")
+dfchild <- read.csv(file='/analysis/data/child/data-aggregate/moco-beh-child.csv', header = TRUE)
 
 # Convert age in days to years
 which(df$AgeDays< 5*365.25) # there is no child younger than 5 yrs
