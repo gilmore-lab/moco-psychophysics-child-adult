@@ -39,114 +39,63 @@ Here we import the aggregate data file found in `analyses/data-aggregate/moco-be
 
 file.exists("analysis/data/child/data-aggregate/moco-beh-child.csv")
 
-```{r import-data}
-# Import child MOCO data, normalize
-library(readr)
-df <- read_csv("/storage/home/y/yxq5055/R/moco-psychophysics-child-adult/analysis/data/child/data-aggregate/moco-beh-child.csv")
-
-# Convert age in days to years
-which(df$AgeDays< 5*365.25) # there is no child younger than 5 yrs
-df$AgeYrs <- ordered(cut(df$AgeDays/365.25, 
+# load data
+```{r load-files}
+df_child <- read.csv(file = "~/Documents/github/moco-psychophysics-child-adult/analysis/data/child/data-aggregate/moco-beh-child.csv", header = TRUE)
+df_adult <- read.csv(file = "~/Documents/github/moco-psychophysics-child-adult/analysis/data/moco-adult.csv", header = TRUE)
+df_adult$Speed <- factor(df_adult$Speed, labels = c("2 deg/s", "8 deg/s"))
+df_child$Speed <- factor(df_child$Speed, labels = c("2 deg/s", "8 deg/s"))
+df_child$Age <- df_child$AgeDays/365.25
+df_child$AgeYrs <- ordered(cut(df_child$AgeDays/365.25, 
                  breaks = c(5,6,7,8,9), 
-                 labels = c("5yo", "6yo", "7yo", "8yo")))
-
-df$Age <- ordered(cut(df$AgeDays/365.25, 
-                 breaks = c(5,6,7,8,9), 
-                 labels = c("5", "6", "7", "8")))
-
-# Convert gender into dummy
-df$Sex<-as.numeric(as.factor(df$Gender)) # Male 2, Female 1
-
-# read the first 6 rows of the data
-head(df)
-
+                 labels = c("5 yrs", "6yrs", "7yrs", "8yrs")))
+df_child$Speed <- factor(df_child$Speed, labels = c("2 deg/s", "8 deg/s"))
+df_child <- df_child %>%
+   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Age, AgeYrs)
+df_adult <- df_adult %>%
+   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Age)
+df_all <- read.csv(file="~/Documents/github/moco-psychophysics-child-adult/analysis/CombinedData.csv", header=TRUE, sep=",")
+#### 30 children and 29 adults, each has 320 data. But the first adult has 480 data.
 ```
-## Clean the data
 
-Here we clean up the data in the trials level. 
-
-```{r outlier-boxplot}
-# plot the outliner 
-boxplot(RT ~ SubID, data=df, main="the boxplot of reaction time for each subject")
-  # from this boxplot, we can see subject 1076 has larger variance than the other. (Shall we exclude data of this subject?)
-```
-```{r cleaning-zero-value}
-# In the previous aggregation, no response trials are treated as "False" response and RT is 0. Revalue this RT
-df2<-df
-df2$RT[which(df$RT==0 & df$Acc==FALSE)] <- NA
-  # all RT of zero value is included (showed by boxplot) 
-boxplot(RT ~ SubID, data=df2, main="the boxplot of cleaned reaction time for each subject")
-```
-```{r clean-up-data-trial-level}
-# there is no reason to clean this RT which is 3SD away from the mean, because more than half of these "outliers" are true responses.
-# # Clean the outliers, the observations that lie outside 3SD (2 cases: very long RT with accurate/inaccurate response; solution 1: remove the case, solution 2: Imputation with mean / median / mode, solution 3 prediction: http://r-statistics.co/Missing-Value-Treatment-With-R.html#4.%20Prediction; Is 0.01 a good criterion?)
-# # method 1: remove the 1% quantile outliers
-# outliersQ<- function(x, na.rm = TRUE, ...) {
-#   qnt <- quantile(x, probs=c(.01, .99), na.rm = na.rm, ...)
-#   y <- x
-#   y[x < qnt[1] ] <- NA
-#   y[x > qnt[2] ] <- NA
-#   y
-# }
-# df2 %>%
-#   group_by(SubID) %>%
-#   mutate(RT = outliersQ(RT)) -> df.clean
-# boxplot(RT ~ SubID, data=df.clean, main="the boxplot of reaction time for each subject cleaned by quantile")
-# # method 2: remove the outliers by z score (3 standard deviation from mean)
-# outliersZ <- function(x, cutoff) {
-#     #compute standard deviation (sample version n = n [not n-1])
-#     y<-x
-#     stdev <- sqrt(sum((x - mean(x, na.rm = T))^2, na.rm = T) / sum(!is.na(x)))
-#     y[abs(x - mean(x, na.rm = T)) > cutoff*stdev ] <- NA
-#     y
-# }
-# df.clean <- df2 %>%
-#   group_by(SubID) %>%
-#   mutate(RT = outliersZ(RT,3))
-# boxplot(RT ~ SubID, data=df.clean, main="the boxplot of reaction time for each subject cleaned by zscore")
-# df2<-df.clean
-# ## The fifth subject (subj 1077) has larger variance of RT than the other subjects.  
-```
 ## subject-level cleaning 
-
 Let's check the plot of df2 for each subject by computing some summary statistics across trial and block. These summary values are saved to the  `df.bysub.bycond` data frame.
-
 ```{r summary-data}
-# summary statistics of df2 
-df2 %>% 
-  group_by(AgeYrs, Gender, SubID, Coh) %>% 
+# summary statistics of child data 
+df_child %>% 
+  group_by(Gender, SubID, Coh) %>% 
   summarize(N.corr = sum(Acc), 
             N.tot = n(), 
             Pct.Corr = N.corr/N.tot,
             RT.mean=mean(RT, na.rm = T),
             RT.sd=sd(RT, na.rm = T)) -> 
-  df.summary
+  df_child.summary
 
-df.summary <- df.summary %>%
-  group_by(Coh) %>%
-  mutate(pcorr.mean=mean(Pct.Corr),
-         pcorr.sd=sd(Pct.Corr),
-         RT.mean.mean=mean(RT.mean),
-         RT.mean.sd=sd(RT.mean))
+# df_child.summary <- df_child.summary %>%
+#   group_by(Coh) %>%
+#   mutate(pcorr.mean=mean(Pct.Corr),
+#          pcorr.sd=sd(Pct.Corr),
+#          RT.mean.mean=mean(RT.mean),
+#          RT.mean.sd=sd(RT.mean))
+# pcorr.mean and RT.mean.mean is the mean of Coherence condition.
 
-head(df.summary)
 # summary statistics of df2 by condition
-df2 %>% 
-  group_by(AgeYrs, Gender, Age, SubID, PatternType, Speed, Coh) %>% 
+df_child %>% 
+  group_by(SubID, Age, Gender, AgeYrs, PatternType, Speed, Coh) %>% 
   summarize(N.corr = sum(Acc), 
             N.tot = n(), 
             Pct.Corr = N.corr/N.tot,
             RT.mean=mean(RT, na.rm = T),
             RT.sd=sd(RT, na.rm = T)) -> 
-  df.bysub.bycond
-df.bysub.bycond <- df.bysub.bycond %>%
+  df_child.bysub.bycond
+
+df_child.bysub.bycond <- df_child.bysub.bycond %>%
   group_by(PatternType,Speed,Coh) %>%
   mutate(pcorr.mean=mean(Pct.Corr),
          pcorr.sd=sd(Pct.Corr),
          RT.mean.mean=mean(RT.mean),
          RT.mean.sd=sd(RT.mean) )
-# read the first 6 rows of this data
-head(df.bysub.bycond)
+# pcorr.mean and RT.mean.mean is the mean of three condition. It is for make plot.
 ```
 
 ```{r test-normality}
@@ -304,32 +253,35 @@ p.rt
 Generalized linear mixed effects model 
 The level 1 (i) is accuracy/RT in each condition for each subject. The level 2 (j) is each subject. The random effects in this model are SubID, Gender and AgeYrs. Fixed effects are Speed, PatternType, Coh, and their interaction
 $Y_{i,j}=B_{0j} + B_{1j}*PatternType_{ij}+B_{2j}*Speed_{ij}+B_{3j}*Coh_{ij}+e_{ij}$
-$B_{0,j} = r_{00}+ r_{01}*AgeYrs_{j}+r_{02}*Gender_{j}+u_{0j}$
+$B_{0,j} = r_{00}+ r_{01}*Age_{j}+r_{02}*Gender_{j}+u_{0j}$
 $B_{1,j} = r_{10}+u_{1j}$
 $B_{2j} = r_{20}+u_{2j}$
 $B_{3j} = r_{30}+u_{3j}$
 
 ## Accuracy 
-df2$Speed <- factor(df2$Speed, labels = c("2deg/s", "8deg/s"))
-df2$Age <- factor(df2$Age,ordered = FALSE) # the variables can not be ordinal, it will have L, C, Q
+df_child$Speed <- factor(df_child$Speed, labels = c("2 deg/s", "8 deg/s"))
+df_child$SubID <- factor(df_child$SubID)
+Rescale and center continuous parameters
+df_child$Coh_scaled<- scale(df_child[,7])
+df_child$Age_scaled<- scale(df_child[,8])
+df2$AgeYrs <- factor(df2$AgeYrs,ordered = FALSE) # the variables can not be ordinal, it will have L, C, Q
 ### probit link function
 #### Empty model
 ```{r acc-probit-empty, eval=FALSE}
 form.empty <- Acc~(1|SubID)
-model.acc.empty <- glmer(formula = form.empty, family=binomial(mafc.probit(2)), data = df2)
+model.acc.empty <- glmer(formula = form.empty, family=binomial(mafc.probit(2)), data = df_child)
 summary(model.acc.empty)
 ```
 
 ```{r ICC-Acc, eval=FALSE}
 ICC_Acc <- 0.1289/(0.1289+0.8074)
-The result is the same as the uncleaned one
-
+# The result is the same as the uncleaned one
 ```
 ICC is small (14%)
 #### full model with random intercept
 ```{r acc-probit-without-Gender-Age, eval=FALSE}
 form.fixed <- Acc ~ Coh + Speed + PatternType  + (1|SubID)
-model.acc.fixed <- glmer(formula = form.fixed, family=binomial(mafc.probit(2)), data = df2)
+model.acc.fixed <- glmer(formula = form.fixed, family=binomial(mafc.probit(2)), data = df_child)
 summary(model.acc.fixed)
 ```
 AIC 5753
@@ -337,24 +289,24 @@ AIC 5753
 #### full model with random intercept and random slope
 ```{r acc-probit-random-slope-gender, eval=FALSE}
 model.gender<- Acc ~ Coh + Speed + PatternType + (1+Gender|SubID)
-model.acc.gender<- glmer(formula = model.gender, family=binomial(mafc.probit(2)), data = df2 )
+model.acc.gender<- glmer(formula = model.gender, family=binomial(mafc.probit(2)),  glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)),data = df_child)
 summary(model.acc.gender)
 ```
 
 AIC 5757
 ```{r acc-probit-random-slope-AgeYrs, eval=FALSE}
 form.age <- Acc ~ Coh + Speed + PatternType + (Age+1|SubID)
-model.acc.age <- glmer(formula = form.age, family=binomial(mafc.probit(2)), data = df2)
+model.acc.age <- glmer(formula = form.age, family=binomial(mafc.probit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)),data = df_child)
 summary(model.acc.age)
 ```
 
-AIC 5767
+AIC 5755
 AIC does not decrease in the random slope model
 
 #### age and gender as fixed effect
 ```{r acc-probit-without-gender, eval=FALSE}
 form.fixed1 <- Acc ~ Coh + Speed + PatternType + Age + (1|SubID)
-model.acc.fixed1 <- glmer(formula = form.fixed1, family=binomial(mafc.probit(2)), data = df2)
+model.acc.fixed1 <- glmer(formula = form.fixed1, family=binomial(mafc.probit(2)),  data = df_child)
 summary(model.acc.fixed1)
 library(lmtest)
 lrtest(model.acc.fixed,model.acc.fixed1) # likelihood test: not significant
@@ -371,23 +323,24 @@ anova(model.acc.fixed,model.acc.fixed2) #significant
 ```
 AIC 5748
 ```{r acc-probit-full, eval=FALSE}
-form.full <- Acc ~ Coh + Speed + PatternType + Gender + Age + (1|SubID)
-model.acc.full <- glmer(formula = form.full, family=binomial(mafc.probit(2)), data = df2)
+form.full <- Acc ~ scale(Coh) + Speed + PatternType + Gender + scale(Age) + (1|SubID)
+model.acc.full <- glmer(formula = form.full, family=binomial(mafc.probit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_child)
 summary(model.acc.full)
 anova(model.acc.fixed,model.acc.full)  # significant
 ```
 #### interaction effect
 ```{r acc-probit-interaction, eval=FALSE}
-form.full1<- Acc ~  Age + Gender + Coh*Speed*PatternType + (1|SubID)
-model.acc.full1 <- glmer(formula = form.full1, family=binomial(mafc.probit(2)), data = df2)
+form.full1<- Acc ~  scale(Age) + Gender + scale(Coh)*Speed*PatternType + (1|SubID)
+model.acc.full1 <- glmer(formula = form.full1, family=binomial(mafc.probit(2)),glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), , data = df_child)
 summary(model.acc.full1)
 anova(model.acc.full1,model.acc.full)  #better fit
 ```
 ```{r acc-probit-interaction-gender-age, eval=FALSE}
-form.full2<- Acc ~ Coh + Speed + PatternType + Age + Gender + Coh*Speed + Age*Coh +Age*Speed + Age*PatternType+Age*Gender+Gender*Coh + Gender*Speed + Gender*PatternType+ (1|SubID)
-model.acc.full2 <- glmer(formula = form.full2, family=binomial(mafc.probit(2)), data = df2)
+form.full2<- Acc ~ scale(Coh) + Speed + PatternType + scale(Age) + Gender + scale(Coh)*Speed + scale(Age)*scale(Coh) +scale(Age)*Speed + scale(Age)*PatternType+scale(Age)*Gender+Gender*scale(Coh) + Gender*Speed + Gender*PatternType+ (1|SubID)
+model.acc.full2 <- glmer(formula = form.full2, family=binomial(mafc.probit(2)),glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_child)
 summary(model.acc.full2)
 anova(model.acc.full1,model.acc.full2)  # better fit
+## scale(Coh)*Speed , scale(Age)*scale(Coh) is significnant
 ```
 # ##### bumped up max number of iterations.
 #  ss <- getME(model.acc.full,c("theta","fixef"))
@@ -399,11 +352,19 @@ anova(model.acc.full1,model.acc.full2)  # better fit
 #                             optCtrl=list(maxfun=2e5)))
 # summary(model.acc.full.new)
 
+```{r acc-probit-full, eval=FALSE}
+form.full3<- Acc ~ scale(Coh) + Speed + PatternType + scale(Age) + Gender + scale(Coh)*Speed  + (1|SubID) #Age*Coh design related
+model.acc.full3 <- glmer(formula = form.full3, family=binomial(mafc.probit(2)),glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_child)
+summary(model.acc.full3)
+anova(model.acc.full2,model.acc.full3)  # better fit
+## scale(Coh)*Speed , scale(Age)*scale(Coh) is significnant
+```
 ### logit link function
 ```{r acc-logit-interaction, eval=FALSE}
-form.acc.logit<- Acc ~ Coh + Speed + PatternType + Coh*Speed + Age*Coh +Age*Speed + Age*PatternType + (1|SubID) #Age*Coh design related
-model.acc.logit <- glmer(formula = form.acc.logit, family=binomial(mafc.logit(2)), data = df2)
+form.acc.logit<- Acc ~ scale(Coh) + Speed + PatternType + scale(Age) + Gender + scale(Coh)*Speed + (1|SubID) #Age*Coh design related
+model.acc.logit <- glmer(formula = form.acc.logit, family=binomial(mafc.logit(2)),glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_child)
 summary(model.acc.logit)
+anova(model.acc.logit,model.acc.full3) 
 # ss <- getME(model.cloglog.interaction,c("theta","fixef"))
 # m2 <- update(model.cloglog.interaction,start=ss,control=glmerControl(optCtrl=list(maxfun=2e4)))
 ```
@@ -412,26 +373,36 @@ summary(model.acc.logit)
 AIC 5715, smaller AIC
 
 ```{r acc-cloglog-interaction, eval=FALSE}
-form.acc.cloglog<- Acc ~ Coh + Speed + PatternType + Coh*Speed + Age*Coh +Age*Speed + Age*PatternType+Age*Gender+Gender*Coh + Gender*Speed + Gender*PatternType + (1|SubID)
-model.acc.cloglog <- glmer(formula = form.acc.cloglog, family=binomial(mafc.cloglog(2)), data = df2)
+# Can fit a Weibull function, but use log contrast as variable 
+# see http://finzi.psych.upenn.edu/library/psyphy/html/mafc.html
+
+form.acc.cloglog<- Acc ~ scale(Coh) + Speed + PatternType + scale(Age) + Gender + scale(Coh)*Speed + (1|SubID)
+model.acc.cloglog <- glmer(formula = form.acc.cloglog, family=binomial(mafc.cloglog(2)),glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)),  data = df_child)
 summary(model.acc.cloglog)
+anova(model.acc.logit,model.acc.cloglog) 
+anova(model.acc.cloglog,model.acc.full3) 
 # ss <- getME(model.cloglog.interaction,c("theta","fixef"))
 # m3 <- update(model.cloglog.interaction,start=ss,control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)))
 # summary(m3)
+
+# Weibull parameters \alpha and \beta
+cc <- coef(model.acc.cloglog)
+alph <- exp(-cc[1]/cc[2])
+bet <- cc[2]
 ```
 AIC 5768
 
 ### Weibull function
 ```{r weibull-interaction, eval=FALSE}
-form.acc.weibull<- Acc ~ Coh + Speed + PatternType + Coh*Speed + Age*Coh +Age*Speed + Age*PatternType+Age*Gender+Gender*Coh + Gender*Speed + Gender*PatternType + (1|SubID)
-model.acc.weibull <- glmer(formula = form.acc.weibull, family=binomial(mafc.weib(2)), data = df2)
+library(psyphy)
+form.acc.weibull<- Acc ~ scale(Coh) + Speed + PatternType + scale(Age) + Gender + scale(Coh)*Speed + (1|SubID)
+model.acc.weibull <- glmer(formula = form.acc.weibull, family=binomial(mafc.weib(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)),  data = df_child)
 summary(model.acc.weibull)
 ```
 AIC 5734
 accfit <- fitdist(df.bysub.bycond$Pct.Corr,"weibull") # by conditions?
 accfit   # estimate
 weibull(,shape=9.3969663,scale=0.9412456)
-
 
 # library(VGAM)
 # form.weibull.interaction<- Acc ~ Coh + Speed + PatternType + Coh*Speed*PatternType + (1|SubID)
@@ -530,208 +501,30 @@ exp(confint(model.logit.interaction))
 <!-- log_odds<-predict(model.logit.interaction,data.frame(b0*Coh + Speed + PatternType + Coh*Speed*PatternType)=c(0.25,0.5,0.75))) -->
 <!-- exp(lodds)/(1+exp(lodds)) -->
 
-## RT
-### Fit Linear Mixed-Effects Models (LMM)
-#### Empty model
-```{r probit-empty, eval=FALSE}
-form.empty.rt <- RT~(1|SubID)
-model.empty.rt <- lmer(formula = form.empty.rt, data = df2, REML=FALSE)
-summary(model.empty.rt)
-```
-AIC 27807
-ICC_RT <- 0.1849/(0.1849+2.29)
-Not that the rt is not normally distributed, which violated the assumption of mixed effect model
-
-#### lm model with random intercept
-```{r rt-no-gaussian, eval=FALSE}
-form.fixed.rt <- RT~ Coh + Speed + PatternType + (1|SubID)
-model.fixed.rt <- lmer(formula = form.fixed.rt, data = df2, REML=FALSE)
-summary(model.fixed.rt)
-```
-AIC 26162
-
-### Gaussian lm model with random intercept
-```{r rt-gaussian, eval=FALSE}
-# normalize to mean=0, sd=1
-RT.norm <- (df2$RT - mean(df2$RT,na.rm=T)) / sd(df2$RT,na.rm = T)
-# Is it Gaussian distributed?
-ks.test(RT.norm,y='pnorm',alternative='two.sided')  # No.The normalized result is still not Gaussian distributed
-# shall I do the normalization subject by subject?
-form.fixed.rt2 <- RT.norm ~ Coh + Speed + PatternType  + Gender+Age + (1|SubID)
-model.fixed.rt2 <- lmer(formula = form.fixed.rt2, data = df2, REML=FALSE)
-summary(model.fixed.rt2)
-```
-AIC 23515
-
-# lmer is used to fit linear mixed-effect models, which assumes that the residual error has a Gaussian distribution. Test whether the residual error is gaussian distribution
-
-```{r model-diagnosis}
-rt.res <- resid(model.fixed.rt2) #Pearson residues
-rt.pred <- predict(model.fixed.rt2) # predicted
-rt.fitted <- fitted(model.fixed.rt2) # predicted y values rt.pred=rt.pred
-
-# test the distribution of residuals
-plot(rt.res,    ylab="Residuals",  main="residual of the rt") #residual by index
-abline(0, 0) 
-
-hist(rt.res) # histogram of residuals
-
-qqnorm(rt.res, cex.main=0.9)
-qqline(rt.res)
-abline(0,0)  ## qqplot of rt.res
-
-par(mfrow=c(2,2)) # init 4 charts in 1 panel
-plot(model.fixed.rt2) # residual by predicted y value
-
-ModDiag<-NA
-ModDiag$fit <- fitted(model.fixed.rt2)
-ModDiag$res <- weighted.residuals(model.fixed.rt2)
-ModDiag$cooks <- cooks.distance(model.fixed.rt2)
-ModDiag$lev <- hatvalues(model.fixed.rt2)
-ModDiagNum <- ModDiag
-for(i in colnames(ModDiagNum)) {
-  ModDiagNum[,i] <- as.numeric(ModDiagNum[,i])
-}
-ModDiagTall <- reshape(ModDiagNum, 
-                 varying=c("Speed","Coh","PatternType","Gender","Age"),
-                 v.names="varVal",
-                 timevar="variable",
-                 times=c("Speed","Coh","PatternType","Gender","Age"),
-                 drop=c("RT.norm","fit"),
-                 direction="long")
-ggplot(ModDiagTall, aes(x=varVal, y=res)) +
-  geom_point() +
-  facet_wrap(~variable, scales="free_x") +
-  theme_bw() +
-  theme(strip.background = element_rect(fill = "White") )
-
-# test normality of residuals, that is heteroscedasticity
-shapiro.test(sample(rt.res,5000)) # sample size must be between 3 to 5000
-ks.test(rt.res,y='pnorm',alternative='two.sided') # it is not normal distribution
-```
-```{r plot-sensitivity}
-# It is important to check that your model is not influenced by one or a small set of observations. This might indicate your model is over fit or that your model is sensitive to the particular observations included in the model.
-ggplot(data.frame(lev=hatvalues(model.fixed.rt2),pearson=residuals(model.fixed.rt2,type="pearson")),
-      aes(x=lev,y=pearson)) +
-    geom_point() +
-    theme_bw()
-
-# The following code determines which of the observations have the highest leverage and displays these observations. The code also generates a new model without these observations and then compares the coefficients for the will all observations to this new model with some observations removed.
-# levId <- which(hatvalues(mm) >= .172)
-# pbDat[levId,c("y","x1","x2","g1")]
-# summary(pbDat[,c("y","x1","x2")])
-# 
-# mmLev <- lmer(y ~ x1 + x2 + (1|g1), data=pbDat[-c(levId),])
-# mmLevCD <- data.frame(effect=fixef(mm),
-#                      change=(fixef(mmLev) - fixef(mm)),
-#                      se=sqrt(diag(vcov(mm)))
-#                      )
-# rownames(mmLevCD) <- names(fixef(mmLev))
-# mmLevCD$multiples <- abs(mmLevCD$change / mmLevCD$se)
-# mmLevCD
-```
-#### Gaussian model with random slope:age
-```{r rt-gaussian-age, eval=FALSE}
-form.random.age <- RT.norm ~ Coh + Speed + PatternType + Gender + Age + (Age|SubID)
-model.random.age <- lmer(formula = form.random.age, data = df2, REML=FALSE)
-summary(model.random.age)
-```
-AIC 23514
-
-#### Gaussian model with random slope: gender
-```{r rt-gaussian-gender, eval=FALSE}
-form.random.gender<- RT.norm ~ Coh + Speed + PatternType  + (Gender|SubID)
-model.random.gender <- lmer(formula = form.random.gender, data = df2, REML=FALSE)
-summary(model.random.gender)
-anova(model.random.gender,model.fixed.rt2)
-```
-AIC 23519 No significant difference
-
-### Gaussian model with interaction
-```{r rt-gaussian-interaction, eval=FALSE}
-form.interaction.rt<- RT.norm ~ Coh + Speed + PatternType  + Age+ Gender + Coh*Speed*PatternType+ (1|SubID)
-model.interaction.rt <- lmer(formula = form.interaction.rt, data = df2, REML=FALSE)
-summary(model.interaction.rt) #AIC 23507
-```
-```{r rt-gaussian-interaction-full, eval=FALSE}
-form.full.rt<- RT.norm ~ Coh + Speed + PatternType  + Age+ Gender + Age*Coh + Age*Speed +Age*PatternType + (1|SubID)
-model.full.rt <- lmer(formula = form.full.rt, data = df2, REML=FALSE)
-summary(model.full.rt) #AIC 23411
-anova(model.full.rt, model.interaction.rt)
-anova(model.full.rt)
-```
-## GLMM
-```{r check-function-fit}
-# qqp requires estimates of the parameters of the negative binomial, Poisson
-# and gamma distributions. You can generate estimates using the fitdistr
-# function. Save the output and extract the estimates of each parameter as I
-# have shown below.
-library(MASS)
-library(car)
-nbinom <- fitdistr(na.omit(df2$RT), "Negative Binomial") # like poisson, for discrete count distribution
-nbinom <- fitdistr(na.omit(df2$RT), "gamma") # bad fit
-nbinom <- fitdistr(na.omit(df2$RT), "logistic") # a discretized distribution
-nbinom <- fitdistr(na.omit(df2$RT), "normal") # bad fit
-nbinom <- fitdistr(na.omit(df2$RT), "lognormal") # worse than logistic
-nbinom <- fitdistr(na.omit(df2$RT), "log-normal") # similar to lognormal, we set the family to gaussian (another word for normal) and the link to log, family = gaussian(link = "log")
-nbinom <- fitdistr(na.omit(df2$RT), "weibull") # bad fit
-qqp(df2$RT, "nbinom", size = nbinom$estimate[[1]], mu = nbinom$estimate[[2]])
-# Check out the plots I've generated using qqp. The y axis represents the observations and the x axis represents the quantiles modeled by the distribution. The solid red line represents a perfect distribution fit and the dashed red lines are the confidence intervals of the perfect distribution fit. You want to pick the distribution for which the largest number of observations falls between the dashed lines. 
-```
-For a continuous outcome where we assume a normal distribution, the most common link function is simply the identity. It essentially drops out and we are back to our usual specification of means and variances for the normal distribution, which is the model used for typical linear mixed models. 
-
-## survival function
-```{r survival-function}
-library(survival)
-# create a Surv object 
-survobj <- with(df2, Surv(RT,Acc))
-# Plot survival distribution of the total sample
-# Kaplan-Meier estimator 
-fit0 <- survfit(survobj~1, data=df2)
-summary(fit0)
-plot(fit0, xlab="RT", 
-  	ylab="% Surviving", yscale=100,
-   main="Survival Distribution (Overall)") 
-# Compare the survival distributions of men and women 
-fit1 <- survfit(survobj~Sex, data=df2)
-# plot the survival distributions by sex 
-plot(fit1, xlab="RT", 
-  ylab="% Surviving", yscale=100, col=c("red","blue"),
-  main="Survival Distributions by Gender") 
-  legend("topright", title="Gender", c("Male", "Female"),
-  fill=c("red", "blue"))
-# test for difference between male and female 
-# survival curves (logrank test) 
-survdiff(survobj~Sex+Coh+Speed+PatternType, data=df2) 
-# predict male survival from age and correct/incorrect responses 
-MaleRep <- coxph(survobj~Age+Coh+Speed+PatternType,
-  data=df2, subset=Sex==2)
-# display results 
-MaleRep
-# evaluate the proportional hazards assumption 
-cox.zph(MaleRep)
-# predict female survival from age and correct/incorrect responses 
-femaleRep <- coxph(survobj~Age+Coh+Speed+PatternType,
-  data=df2, subset=Sex==1)
-femaleRep
-cox.zph(femaleRep)
-```
-
-##mixed effects cox models
-```{r mixed-effects-survival-model-RT}
-m <- coxph(survobj ~ Age + Sex + Speed+PatternType+Coh + cluster(SubID), 
-    data = df2)
-## summary of the model
-summary(m)
-# given repeated observations on individuals each individual likely has their own baseline so adjust with a mixed effects cox model using the coxme package
-m2 <- coxme(survobj ~ Age + Sex + Speed+PatternType+Coh + cluster(SubID), 
-    data = df2)
-m2
-```
-
-
-
 ### plotting
+
+#### Plot of comparison of link functions
+```{r p-corr-by-link-function}
+# Evaluate Speed by Coherence interaction
+spd <- df_child.summary %>%
+  group_by(Coh) %>%
+  summarize(Pct.Corr.mean = mean(Pct.Corr, na.rm=TRUE),
+            Pct.Corr.sem = sd(Pct.Corr, na.rm=TRUE)/sqrt( n() ))
+# limits = aes( ymax = Pct.Corr.mean + Pct.Corr.sem , ymin = Pct.Corr.mean - Pct.Corr.sem )
+
+p <- 
+  ggplot( data=spd, aes(x=Coh, y=Pct.Corr.mean) ) +
+  geom_line() +
+  # geom_pointrange( limits ) +
+  xlim(0,1) +
+  ylim(.4, 1) +
+  ylab("p(corr)") +
+  xlab("Coherence)") +
+  theme_bw() +
+  theme.custom +
+  geom_hline(yintercept=0.5, linetype="dashed")
+p
+```
 #### Plot of speed across patterns by age
 ```{r p-corr-by-speed-and-age-plot}
 # Evaluate Speed by Coherence interaction
@@ -757,7 +550,305 @@ p6 <-
 p6
 ```
 
+# Plot of coherence by pattern across age
+```{r p-corr-by-pattern-and-age-plot, include=TRUE}
+patt.by.coh <- df.bysub.bycond %>%
+  group_by(PatternType, Coh, AgeYrs) %>%
+  summarize(Pct.Corr.mean = mean(Pct.Corr, na.rm=TRUE),
+            Pct.Corr.sem = sd(Pct.Corr, na.rm=TRUE)/sqrt( n() ))
 
+limits = aes( ymax = Pct.Corr.mean + Pct.Corr.sem , ymin = Pct.Corr.mean - Pct.Corr.sem )
+
+p7 <- 
+  ggplot( data=patt.by.coh, aes(x=Coh, y=Pct.Corr.mean, color = AgeYrs) ) +
+  facet_grid( facets = ~ PatternType ) +
+  geom_line() +
+  geom_pointrange( limits ) +
+  xlim(0, 1) +
+  ylim(.4, 1) +
+  ylab("p(corr)") +
+  xlab("Coherence)") +
+  theme_bw() +
+  theme.custom +
+  geom_hline(yintercept=0.5, linetype="dashed")
+p7
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# adult data
+### it is the data exclude subj 14
+### plot of *p*(Corr) by subj
+```{r p-corr-subj-mean-plot}
+# Plot theme, customizations 
+y_lbl <- 'p(corr)'
+title_text <- 'p(corr) by subj'
+
+# lines for each subj
+p1 <- ggplot(df.summary, aes(Coh, Pct.Corr)) +
+   geom_line(aes(group=SubID, color=Age)) +
+   labs(x="Coherence", y=y_lbl) +
+   ggtitle(title_text) +
+   theme_bw() +
+   theme.custom +
+   xlim(0.05, 0.2) +
+   geom_hline(yintercept=0.5, linetype="dashed")
+
+ sd = 3
+ df.summary <- df.summary %>%
+   group_by(Coh) %>%
+   mutate(pcorr.lower_bound = pcorr.mean-sd*pcorr.sd,pcorr.upper_bound=pcorr.mean+sd*pcorr.sd)
+
+#confidence band
+p1 <- p1 +
+   geom_line(aes(Coh, pcorr.mean), size = 2) +
+   geom_ribbon(aes(ymin = pcorr.lower_bound, ymax =pcorr.upper_bound), fill = "grey70",
+                 alpha=0.5)       #transparency
+
+ p1
+ # I can try geom_smooth function next time
+# from the plot, we can see the accuracy of subj 1088 has below average percentage of accuracy. But it is not significant
+```
+
+```{r exclude-outlier-subject}
+# summary statistics of df2 by condition
+df_adult %>% 
+  group_by(Gender, Age, SubID, PatternType, Speed, Coh) %>% 
+  summarize(N.corr = sum(Acc), 
+            N.tot = n(), 
+            Pct.Corr = N.corr/N.tot,
+            RT.mean=mean(RT, na.rm = T),
+            RT.sd=sd(RT, na.rm = T)) -> 
+  df_adult.bysub.bycond
+df_adult.bysub.bycond <- df_adult.bysub.bycond %>%
+  group_by(PatternType,Speed,Coh) %>%
+  mutate(pcorr.mean=mean(Pct.Corr),
+         pcorr.sd=sd(Pct.Corr),
+         RT.mean.mean=mean(RT.mean),
+         RT.mean.sd=sd(RT.mean) )
+```
+
+### Plot of *p*(corr) by condition
+```{r p-corr-pattern-speed-plot, include=TRUE}
+title_text <- 'p(corr) by Coherence, Pattern, and Speed'
+df.bysub.bycond$Speed <- factor(df.bysub.bycond$Speed, labels = c("2 deg/s", "8 deg/s"))
+
+sd = 3
+df.bysub.bycond <- df.bysub.bycond %>%
+  group_by(PatternType, Speed,Coh) %>%
+  mutate(lower_bound = pcorr.mean-sd*pcorr.sd,upper_bound=pcorr.mean+sd*pcorr.sd)
+# Plot for all subs
+p.corr <- ggplot(data=df.bysub.bycond, aes(x=Coh, y=Pct.Corr))
+p.corr <- p.corr +
+  geom_line(aes(group=SubID, color=Age)) +
+  facet_grid(facets = Speed ~ PatternType) +
+  labs(x="Coherence", y=y_lbl) +
+  ggtitle(title_text) +
+  theme_bw() +
+  theme.custom +
+  xlim(0.05, 0.2) +
+  geom_hline(yintercept=0.5, linetype="dashed")
+# confidence band
+p.corr <- p.corr +
+  geom_line(aes(Coh, pcorr.mean), size = 2) +
+  geom_ribbon(aes(ymin = lower_bound, ymax =upper_bound), fill = "grey70",
+                alpha=0.5)
+p.corr
+```
+
+#Generalized linear mixed effects model with a probit link/ logit link/ weibull model
+Generalized linear mixed effects model 
+The level 1 (i) is accuracy/RT in each condition for each subject. The level 2 (j) is each subject. The random effects in this model are SubID, Gender and AgeYrs. Fixed effects are Speed, PatternType, Coh, and their interaction
+$Y_{i,j}=B_{0j} + B_{1j}*PatternType_{ij}+B_{2j}*Speed_{ij}+B_{3j}*Coh_{ij}+e_{ij}$
+$B_{0,j} = r_{00}+ r_{01}*AgeYrs_{j}+r_{02}*Gender_{j}+u_{0j}$
+$B_{1,j} = r_{10}+u_{1j}$
+$B_{2j} = r_{20}+u_{2j}$
+$B_{3j} = r_{30}+u_{3j}$
+
+## Accuracy 
+df_adult$Speed <- factor(df_adult$Speed, labels = c("2 deg/s", "8 deg/s"))
+df_adult$SubID <- factor(df_adult$SubID)
+Rescale and center continuous parameters
+df_adult$Coh_scaled<- scale(df_adult[,7])
+df_adult$Age_scaled<- scale(df_adult[,8])
+
+df2$Age <- factor(df2$Age,ordered = FALSE) # the variables can not be ordinal, it will have L, C, Q
+### probit link function
+#### Empty model
+```{r acc-probit-empty, eval=FALSE}
+form.empty <- Acc~(1|SubID)
+model.acc.empty <- glmer(formula = form.empty, family=binomial(mafc.probit(2)), data = df_adult)
+summary(model.acc.empty)
+```
+
+```{r ICC-Acc, eval=FALSE}
+ICC_Acc <-
+The result is the same as the uncleaned one
+
+```
+ICC is small (14%)
+#### full model with random intercept
+```{r acc-probit-without-Gender-Age, eval=FALSE}
+form.fixed <- Acc ~ Coh + Speed + PatternType  + (1|SubID)
+model.acc.fixed <- glmer(formula = form.fixed, family=binomial(mafc.probit(2)), data = df_adult)
+summary(model.acc.fixed) # AIC 9434
+```
+
+#### full model with random intercept and random slope
+```{r acc-probit-random-slope-gender, eval=FALSE}
+form.gender<- Acc ~ Coh + Speed + PatternType + (Gender|SubID)
+model.acc.gender<- glmer(formula = form.gender, family=binomial(mafc.probit(2)), data = df2,
+                         control=glmerControl(optimizer="bobyqa",
+                          optCtrl=list(maxfun=1000000)) ) #AIC 9429
+anova(model.acc.gender,model.acc.fixed)   # better fit
+form.age <- Acc ~ Coh + Speed + PatternType + (Age|SubID)
+model.acc.age <- glmer(formula = form.age, family=binomial(mafc.probit(2)), data = df2) #AIC 
+form.coh<- Acc ~ Coh + Speed + PatternType + (Coh|SubID)
+model.acc.coh<- glmer(formula = form.coh, family=binomial(mafc.probit(2)), data = df2 ) #AIC 9424 better fit
+form.speed <- Acc ~ Coh + Speed + PatternType + (Speed|SubID)
+model.acc.speed <- glmer(formula = form.speed, family=binomial(mafc.probit(2)), data = df2) #AIC 9338, better fit
+form.pattern <- Acc ~ Coh + Speed + PatternType + (PatternType|SubID)
+model.acc.pattern <- glmer(formula = form.pattern, family=binomial(mafc.probit(2)), data = df2) #AIC 9395.5, better fit
+anova(model.acc.fixed,model.acc.coh)
+anova(model.acc.fixed,model.acc.speed)
+anova(model.acc.fixed,model.acc.pattern)
+```
+AIC does not decrease in the random slope model of age and 
+
+####  gender as fixed effect
+```{r acc-probit-full, eval=FALSE}
+form_a.full <- Acc ~ Coh + Speed + PatternType + Gender + (1|SubID)
+model_a.acc.full <- glmer(formula = form_a.full, family=binomial(mafc.probit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_adult)
+summary(model_a.acc.full) # AIC 9414
+anova(model_a.acc.fixed,model.acc.full)  # significant
+anova(model_a.acc.full)
+```
+#### interaction effect
+```{r acc-probit-interaction, eval=FALSE}
+form_a.full1<- Acc ~  Gender+scale(Coh)+Speed+PatternType + scale(Coh)*Speed*PatternType + (1|SubID)
+model_a.acc.full1 <- glmer(formula = form_a.full1, family=binomial(mafc.probit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 200000)),  data = df_adult)
+summary(model_a.acc.full1)
+ # AIC 9351.8
+# Model failed to converge
+```
+
+```{r acc-probit-interaction-gender-age, eval=FALSE}
+form_a.full3<- Acc ~ scale(Coh) + Speed + PatternType + Gender + scale(Coh)*Speed + scale(Coh)*PatternType + Gender*scale(Coh) + Gender*Speed + Gender*PatternType+ (1|SubID)
+model_a.acc.full3 <- glmer(formula = form_a.full3, family=binomial(mafc.probit(2)),glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)),  data = df_adult) # AIC 9359.9
+summary(model_a.acc.full3)
+```
+```{r acc-probit-interaction-gender-coh, eval=FALSE}
+form_a.probit<- Acc ~ scale(Coh) + PatternType + Speed + PatternType*scale(Coh) + Gender*Speed + Gender*PatternType+ (1|SubID)
+model_a.acc.probit <- glmer(formula = form_a.probit, family=binomial(mafc.probit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)),  data = df_adult)
+summary(model_a.acc.probit)
+anova(model_a.acc.full3,model_a.acc.probit)  # 9356.9, better fit
+```
+# ##### bumped up max number of iterations.
+#  ss <- getME(model.acc.full,c("theta","fixef"))
+# <!-- m2 <- update(model.acc.full,start=ss,control=glmerControl(optCtrl=list(maxfun=2e4))) -->
+# still failed,  Try a different optimizer
+# 
+# ```{r find-optimizer}
+# model.acc.full.new <- update(model.acc.full,start=ss,control=glmerControl(optimizer="bobyqa",
+#                             optCtrl=list(maxfun=2e5)))
+# summary(model.acc.full.new)
+
+### logit link function
+```{r acc-logit-interaction, eval=FALSE}
+model_a.acc.logit <- glmer(formula = form_a.probit, family=binomial(mafc.logit(2)), data = df_adult)
+summary(model_a.acc.logit) # better fit than probit
+anova(model_a.acc.logit,model_a.acc.probit)
+# ss <- getME(model.cloglog.interaction,c("theta","fixef"))
+# m2 <- update(model.cloglog.interaction,start=ss,control=glmerControl(optCtrl=list(maxfun=2e4)))
+```
+lmerTest::anova(model.acc.logit)
+MuMIn::r.squaredGLMM(model.acc.logit2) # ICC?
+MuMIn::r.squaredLR(model.acc.logit2)
+MuMIn::r.squaredLR(model.acc.logit2,null.RE = TRUE) 
+# (R2m <- Vf / (Vtotal))
+# (R2c <- (Vf + Vr) / (Vtotal))
+effsize::cohen.d(df2$Acc ~ Gender+ Coh + Speed + PatternType + Coh*Speed + +Age*Speed + Age*PatternType + (1|SubID))
+aod::wald.test(b = coef(model.acc.logit), Sigma = vcov(model.logit.interaction), Terms = 4:6)
+
+```{r acc-cloglog-interaction, eval=FALSE}
+model_a.acc.cloglog <- glmer(formula = form_a.probit, family=binomial(mafc.cloglog(2)), data = df_adult)
+summary(model_a.acc.cloglog)
+anova(model_a.acc.logit,model_a.acc.cloglog)
+# ss <- getME(model.cloglog.interaction,c("theta","fixef"))
+# m3 <- update(model.cloglog.interaction,start=ss,control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)))
+# summary(m3)
+```
+AIC 5768
+
+```{r acc-cloglog-interaction, eval=FALSE}
+model_a.acc.weibull <- glmer(formula = form_a.probit, family=binomial(mafc.weib(2)), data = df_adult)
+summary(model_a.acc.weibull)
+anova(model_a.acc.logit,model_a.acc.weibull)
+```
+
+## Further examination for the models
+### obtain confidence intervals for the coefficient estimates
+confint(model.acc.logit) 
+# get the exact 95% confidence interval for the coefficients b
+exp(confint(model.logit.interaction))
+
+```{r plot-sensitivity}
+# It is important to check that your model is not influenced by one or a small set of observations. This might indicate your model is over fit or that your model is sensitive to the particular observations included in the model.
+ggplot(data.frame(lev=hatvalues(model.fixed.rt2),pearson=residuals(model.fixed.rt2,type="pearson")),
+      aes(x=lev,y=pearson)) +
+    geom_point() +
+    theme_bw()
+
+# The following code determines which of the observations have the highest leverage and displays these observations. The code also generates a new model without these observations and then compares the coefficients for the will all observations to this new model with some observations removed.
+# levId <- which(hatvalues(mm) >= .172)
+# pbDat[levId,c("y","x1","x2","g1")]
+# summary(pbDat[,c("y","x1","x2")])
+# 
+# mmLev <- lmer(y ~ x1 + x2 + (1|g1), data=pbDat[-c(levId),])
+# mmLevCD <- data.frame(effect=fixef(mm),
+#                      change=(fixef(mmLev) - fixef(mm)),
+#                      se=sqrt(diag(vcov(mm)))
+#                      )
+# rownames(mmLevCD) <- names(fixef(mmLev))
+# mmLevCD$multiples <- abs(mmLevCD$change / mmLevCD$se)
+# mmLevCD
+```
+
+### plotting
+#### Plot of speed across patterns by age
+```{r p-corr-by-speed-and-age-plot}
+# Evaluate Speed by Coherence interaction
+spd.by.coh <- df.bysub.bycond %>%
+  group_by(Speed, Coh, AgeYrs) %>%
+  summarize(Pct.Corr.mean = mean(Pct.Corr, na.rm=TRUE),
+            Pct.Corr.sem = sd(Pct.Corr, na.rm=TRUE)/sqrt( n() ))
+limits = aes( ymax = Pct.Corr.mean + Pct.Corr.sem , ymin = Pct.Corr.mean - Pct.Corr.sem )
+p6 <- 
+  ggplot( data=spd.by.coh, aes(x=Coh, y=Pct.Corr.mean, color = AgeYrs) ) +
+  facet_grid( facets = . ~ Speed ) +
+  geom_line() +
+  geom_pointrange( limits ) +
+  xlim(0,1) +
+  ylim(.4, 1) +
+  ylab("p(corr)") +
+  xlab("Coherence)") +
+  theme_bw() +
+  theme.custom +
+  geom_hline(yintercept=0.5, linetype="dashed")
+p6
+```
 
 # Plot of coherence by pattern across age
 ```{r p-corr-by-pattern-and-age-plot, include=TRUE}
@@ -783,53 +874,346 @@ p7 <-
 p7
 ```
 
-# RT by pattern across age
-```{r rt-by-pattern-and-age-plot}
-patt.by.coh.rt <- df.bysub.bycond %>%
-  group_by(PatternType, Coh, AgeYrs) %>%
-  summarize(RT.Cond.mean = mean(RT.mean, na.rm=TRUE),
-            RT.sem = sd(RT.sd, na.rm=TRUE)/sqrt( n() ))
 
-limits = aes(ymax = RT.Cond.mean + RT.sem, ymin = RT.Cond.mean - RT.sem)
+### plot of mean and sd of Speed and patterntype
+```{r plot-speed-patterntype}
+df2 %>% 
+  filter(Group=="linear-radial coh [.15 .3 .45 .6]") %>%
+  group_by(AgeYrs, Gender, Age, SubID, PatternType, Speed, Coh) %>% 
+  summarize(N.corr = sum(Acc), 
+            N.tot = n(), 
+            Pct.Corr = N.corr/N.tot,
+            RT.mean=mean(RT, na.rm = T),
+            RT.sd=sd(RT, na.rm = T)) -> df3
+            
+df.speed_Pattern <- df3 %>%
+  group_by(Speed,PatternType) %>%
+  summarize(pcorr.mean=mean(Pct.Corr),
+         pcorr.se=sd(Pct.Corr)/sqrt(length(Pct.Corr)),
+         RT.mean.mean=mean(RT.mean),
+         RT.mean.se=sd(RT.mean)/sqrt(length(RT.mean)))
+pd <- position_dodge(0.00) # The errorbars overlapped, so use position_dodge to move them horizontally
+ggplot(df.speed_Pattern, aes(x=Speed, y=pcorr.mean, colour=PatternType, group=PatternType)) + 
+    geom_errorbar(aes(ymin=pcorr.mean-pcorr.se, ymax=pcorr.mean+pcorr.se), colour="black", width=.1, position=pd) +
+    geom_line(position=pd) +
+    geom_point(position=pd, size=2) +    #21 is filled circle
+    xlab("Speed (deg/s)") +
+    ylab("Percentage of Accuracy") +
+    scale_colour_hue(name="Optic Flow Pattern",    #Legend label, use darker colors
+                     breaks=c("linear", "radial"),
+                     labels=c("Linear motion", "Radial Motion"),
+                     l=40) +                    # Use darker colors, lightness=40
+    ggtitle("The Effect of Optic Flow Speed and Pattern Type on Accuracy") +
+   # expand_limits(y=0) +                        # Expand y range
+   # scale_y_continuous(breaks=0:20*4) +         # Set tick every 4
+    theme_bw() +
+    theme.custom 
+   # theme(legend.justification=c(1,0),legend.position=c(1,0))               # Position legend in bottom right
 
-p7 <- 
-  ggplot( data=patt.by.coh.rt, aes(x=Coh, y=RT.Cond.mean, color = AgeYrs)) +
-  facet_grid( facets = ~ PatternType ) +
-  geom_line() +
-  geom_pointrange( limits ) +
-  xlim(0, 1) +
-  ylab("RT (s)") +
-  xlab("Coherence") +
-  theme_bw() +
-  theme.custom
-p7
+ggplot(df.speed_Pattern, aes(x=Speed, y=RT.mean.mean, colour=PatternType, group=PatternType)) + 
+    geom_errorbar(aes(ymin=RT.mean.mean-RT.mean.se, ymax=RT.mean.mean+RT.mean.se), colour="black", width=.1, position=pd) +
+    geom_line(position=pd) +
+    geom_point(position=pd, size=2) +    #21 is filled circle
+    xlab("Speed (deg/s)") +
+    ylab("RT") +
+    scale_colour_hue(name="Optic Flow Pattern",    #Legend label, use darker colors
+                     breaks=c("linear", "radial"),
+                     labels=c("Linear motion", "Radial Motion"),
+                     l=40) +                    # Use darker colors, lightness=40
+    ggtitle("The Effect of Optic Flow Speed and Pattern Type on reaction times") +
+   # expand_limits(y=0) +                        # Expand y range
+   # scale_y_continuous(breaks=0:20*4) +         # Set tick every 4
+    theme_bw() +
+    theme.custom +
+   theme(legend.justification=c(1,0),legend.position=c(1,0)) 
 ```
-# RT by speed across patterns
+### plot of mean and sd of Speed and Coh
+```{r p-corr-speed-coh}
+df.speed_coh <- df.bysub.bycond %>%
+  group_by(Speed,Coh) %>%
+  summarize(pcorr.mean=mean(Pct.Corr),
+         pcorr.se=sd(Pct.Corr)/sqrt(length(Pct.Corr)),
+         RT.mean.mean=mean(RT.mean),
+         RT.mean.se=sd(RT.mean)/sqrt(length(RT.mean)))
+         
+pd <- position_dodge(0.01) # The errorbars overlapped, so use position_dodge to move them horizontally
+ggplot(df.speed_coh, aes(x=Coh, y=pcorr.mean, colour=Speed, group=Speed)) + 
+    geom_errorbar(aes(ymin=pcorr.mean-pcorr.se, ymax=pcorr.mean+pcorr.se), colour="black", width=.1, position=pd)+
+    geom_line(position=pd) +
+    geom_point(position=pd,size=2) +    #21 is filled circle
+    xlab("Coherence (%)") +
+    ylab("Percentage of Accuracy") +
+    scale_colour_hue(name="Optic Flow Speed",    #Legend label, use darker colors
+                     breaks=c("2deg/s", "8deg/s"),
+                     labels=c("2 deg/s", "8 deg/s"),
+                     l=40) +                    # Use darker colors, lightness=40
+    ggtitle("The Effect of Optic Flow Speed and Coherence on Accuracy") +
+   # expand_limits(y=0) +                        # Expand y range
+   # scale_y_continuous(breaks=0:20*4) +         # Set tick every 4
+    theme_bw() +
+    theme.custom +
+    theme(legend.justification=c(1,0),legend.position=c(1,0))               # Position legend in bottom right
 
-```{r rt-by-speed-and-age-plot, include=TRUE}
-# Evaluate Speed by Coherence interaction
-spd.by.coh.rt <- df.bysub.bycond %>%
-  group_by(Speed, Coh, AgeYrs) %>%
-  summarize(RT.Cond.mean = mean(RT.mean, na.rm=TRUE),
-            RT.sem = sd(RT.sd, na.rm=TRUE)/sqrt( n() ))
+ggplot(df.speed_coh, aes(x=Coh, y=RT.mean.mean, colour=Speed, group=Speed)) + 
+    geom_errorbar(aes(ymin=RT.mean.mean-RT.mean.se, ymax=RT.mean.mean+RT.mean.se), colour="black", width=.1, position=pd) +
+    geom_line(position=pd) +
+    geom_point(position=pd, size=2) +    #21 is filled circle
+    xlab("Cohernce (%))") +
+    ylab("RT") +
+    scale_colour_hue(name="Optic Flow Pattern",    #Legend label, use darker colors
+                     breaks=c("2deg/s", "8deg/s"),
+                     labels=c("2 deg/s", "8 deg/s"),
+                     l=40) +                    # Use darker colors, lightness=40
+    ggtitle("The Effect of Optic Flow Speed and Coherence on Reaction times") +
+   # expand_limits(y=0) +                        # Expand y range
+   # scale_y_continuous(breaks=0:20*4) +         # Set tick every 4
+    theme_bw() +
+    theme.custom +
+   theme(legend.justification=c(1,0),legend.position=c(1,0)) 
+```
+### plot of mean and sd of Patterntype and Coh
+```{r p-corr-pattern-coh}
+df.pattern_coh <- df.bysub.bycond %>%
+  group_by(PatternType,Coh) %>%
+  summarize(pcorr.mean=mean(Pct.Corr),
+         pcorr.se=sd(Pct.Corr)/sqrt(length(Pct.Corr)),
+         RT.mean.mean=mean(RT.mean),
+         RT.mean.se=sd(RT.mean)/sqrt(length(RT.mean)))
+         
+pd <- position_dodge(0.01) # The errorbars overlapped, so use position_dodge to move them horizontally
+ggplot(df.pattern_coh, aes(x=Coh, y=pcorr.mean, colour=PatternType, group=PatternType)) + 
+    geom_errorbar(aes(ymin=pcorr.mean-pcorr.se, ymax=pcorr.mean+pcorr.se), colour="black", width=.1, position=pd)+
+    geom_line(position=pd) +
+    geom_point(position=pd,size=2) +    #21 is filled circle
+    xlab("Coherence (%)") +
+    ylab("Percentage of Accuracy") +
+    scale_colour_hue(name="Optic Flow Speed",    #Legend label, use darker colors
+                     breaks=c("linear", "radial"),
+                     labels=c("Linear motion", "Radial Motion"),
+                     l=40) +                    # Use darker colors, lightness=40
+    ggtitle("The Effect of Optic Flow Pattern Type and Coherence on Accuracy") +
+   # expand_limits(y=0) +                        # Expand y range
+   # scale_y_continuous(breaks=0:20*4) +         # Set tick every 4
+    theme_bw() +
+    theme.custom +
+    theme(legend.justification=c(1,0),legend.position=c(1,0))               # Position legend in bottom right
 
-limits = aes(ymax = RT.Cond.mean + RT.sem, ymin = RT.Cond.mean - RT.sem)
+ggplot(df.pattern_coh, aes(x=Coh, y=RT.mean.mean, colour=PatternType, group=PatternType)) + 
+    geom_errorbar(aes(ymin=RT.mean.mean-RT.mean.se, ymax=RT.mean.mean+RT.mean.se), colour="black", width=.1, position=pd) +
+    geom_line(position=pd) +
+    geom_point(position=pd, size=2) +    #21 is filled circle
+    xlab("Cohernce (%))") +
+    ylab("RT") +
+    scale_colour_hue(name="Optic Flow Pattern",    #Legend label, use darker colors
+                    breaks=c("linear", "radial"),
+                     labels=c("Linear motion", "Radial Motion"),
+                     l=40) +                    # Use darker colors, lightness=40
+    ggtitle("The Effect of Optic Flow pattern type and Coherence on Reaction times") +
+   # expand_limits(y=0) +                        # Expand y range
+   # scale_y_continuous(breaks=0:20*4) +         # Set tick every 4
+    theme_bw() +
+    theme.custom +
+   theme(legend.justification=c(1,0),legend.position=c(1,0)) 
+```
+### plot of mean and sd of Age and Coh
+```{r p-corr-age-coh}
+df.age_coh <- df3 %>%
+  group_by(Age,Coh) %>%
+  summarize(pcorr.mean=mean(Pct.Corr),
+         pcorr.se=sd(Pct.Corr)/sqrt(length(Pct.Corr)),
+         RT.mean.mean=mean(RT.mean),
+         RT.mean.se=sd(RT.mean)/sqrt(length(RT.mean)))
+         
+pd <- position_dodge(0.01) # The errorbars overlapped, so use position_dodge to move them horizontally
+ggplot(df.age_coh, aes(x=Coh, y=pcorr.mean, colour=Age, group=Age)) + 
+    geom_errorbar(aes(ymin=pcorr.mean-pcorr.se, ymax=pcorr.mean+pcorr.se), colour="black", width=.1, position=pd)+
+    geom_line(position=pd) +
+    geom_point(position=pd,size=2) +    #21 is filled circle
+    xlab("Coherence (%)") +
+    ylab("Percentage of Accuracy") +
+    scale_colour_hue(name="Age",    #Legend label, use darker colors
+                     breaks=c("5", "6", "7", "8"),
+                     labels=c("5 year old", "6 year old","7 year old","8 year old"),
+                     l=40) +                    # Use darker colors, lightness=40
+    ggtitle("The Effect of Age and Optic Flow Coherence on Accuracy") +
+   # expand_limits(y=0) +                        # Expand y range
+   # scale_y_continuous(breaks=0:20*4) +         # Set tick every 4
+    theme_bw() +
+    theme.custom +
+    theme(legend.justification=c(1,0),legend.position=c(1,0))               # Position legend in bottom right
 
-p.rt <- 
-  ggplot( data=spd.by.coh.rt, aes(x=Coh, y=RT.Cond.mean, color = AgeYrs)) +
-  facet_grid( facets = . ~ Speed ) +
-  geom_line() +
-  geom_pointrange( limits ) +
-  xlim(0,1) +
-  ylab("RT (s)") +
-  xlab("Coherence") +
-  theme_bw() +
-  theme.custom
-p.rt
+ggplot(df.age_coh, aes(x=Coh, y=RT.mean.mean, colour=Age, group=Age)) + 
+    geom_errorbar(aes(ymin=RT.mean.mean-RT.mean.se, ymax=RT.mean.mean+RT.mean.se), colour="black", width=.1, position=pd) +
+    geom_line(position=pd) +
+    geom_point(position=pd, size=2) +    #21 is filled circle
+    xlab("Cohernce (%))") +
+    ylab("RT") +
+    scale_colour_hue(name="Age",    #Legend label, use darker colors
+                     breaks=c("5", "6", "7", "8"),
+                     labels=c("5 year old", "6 year old","7 year old","8 year old"),
+                     l=40) +                    # Use darker colors, lightness=40
+    ggtitle("The Effect of Age and Optic Flow Coherence on Reaction times") +
+   # expand_limits(y=0) +                        # Expand y range
+   # scale_y_continuous(breaks=0:20*4) +         # Set tick every 4
+    theme_bw() +
+    theme.custom +
+   theme(legend.justification=c(1,0),legend.position=c(1,0)) 
 ```
 
-## threshold 
+### plot of mean and sd of Age and Coh
+```{r p-corr-age-patterntype}
+df.age_pattern <- df3 %>%
+  group_by(Age,PatternType) %>%
+  summarize(pcorr.mean=mean(Pct.Corr),
+         pcorr.se=sd(Pct.Corr)/sqrt(length(Pct.Corr)),
+         RT.mean.mean=mean(RT.mean),
+         RT.mean.se=sd(RT.mean)/sqrt(length(RT.mean)))
+         
+pd <- position_dodge(0.01) # The errorbars overlapped, so use position_dodge to move them horizontally
+ggplot(df.age_pattern, aes(x=Age, y=pcorr.mean, colour=PatternType, group=PatternType)) + 
+    geom_errorbar(aes(ymin=pcorr.mean-pcorr.se, ymax=pcorr.mean+pcorr.se), colour="black", width=.1, position=pd)+
+    geom_line(position=pd) +
+    geom_point(position=pd,size=2) +    #21 is filled circle
+    xlab("Age (yrs)") +
+    ylab("Percentage of Accuracy") +
+    scale_colour_hue(name="Age",    #Legend label, use darker colors
+                     breaks=c("linear", "radial"),
+                     labels=c("Linear motion", "Radial Motion"),
+                     l=40) +                    # Use darker colors, lightness=40
+    ggtitle("The Effect of Age and Optic Flow Pattern Type on Accuracy") +
+   # expand_limits(y=0) +                        # Expand y range
+   # scale_y_continuous(breaks=0:20*4) +         # Set tick every 4
+    theme_bw() +
+    theme.custom +
+    theme(legend.justification=c(1,0),legend.position=c(1,0))               # Position legend in bottom right
 
-## child v.s. adult 
-### group comparison
-### 15% coh
+ggplot(df.age_pattern, aes(x=Age, y=RT.mean.mean, colour=PatternType, group=PatternType)) + 
+    geom_errorbar(aes(ymin=RT.mean.mean-RT.mean.se, ymax=RT.mean.mean+RT.mean.se), colour="black", width=.1, position=pd) +
+    geom_line(position=pd) +
+    geom_point(position=pd, size=2) +    #21 is filled circle
+    xlab("Age (yrs)") +
+    ylab("RT") +
+    scale_colour_hue(name="Optic Flow Pattern",    #Legend label, use darker colors
+                     breaks=c("linear", "radial"),
+                     labels=c("Linear motion", "Radial Motion"),
+                     l=40) +                    # Use darker colors, lightness=40
+    ggtitle("The Effect of Age and Optic Flow Pattern Type on Reaction times") +
+   # expand_limits(y=0) +                        # Expand y range
+   # scale_y_continuous(breaks=0:20*4) +         # Set tick every 4
+    theme_bw() +
+    theme.custom +
+   theme(legend.justification=c(1,0),legend.position=c(1,0)) 
+```
+
+### plot of mean and sd of Age and Speed
+```{r p-corr-age-speed}
+df.age_speed <- df3 %>%
+  group_by(Age,Speed) %>%
+  summarize(pcorr.mean=mean(Pct.Corr),
+         pcorr.se=sd(Pct.Corr)/sqrt(length(Pct.Corr)),
+         RT.mean.mean=mean(RT.mean),
+         RT.mean.se=sd(RT.mean)/sqrt(length(RT.mean)))
+         
+pd <- position_dodge(0.01) # The errorbars overlapped, so use position_dodge to move them horizontally
+ggplot(df.age_speed, aes(x=Age, y=pcorr.mean, colour=Speed, group=Speed)) + 
+    geom_errorbar(aes(ymin=pcorr.mean-pcorr.se, ymax=pcorr.mean+pcorr.se), colour="black", width=.1, position=pd)+
+    geom_line(position=pd) +
+    geom_point(position=pd,size=2) +    #21 is filled circle
+    xlab("Age (yrs)") +
+    ylab("Percentage of Accuracy") +
+    scale_colour_hue(name="Age",    #Legend label, use darker colors
+                     breaks=c("2deg/s", "8deg/s"),
+                     labels=c("2 deg/s", "8 deg/s"),
+                     l=40) +                    # Use darker colors, lightness=40
+    ggtitle("The Effect of Age and Optic Flow Speed on Accuracy") +
+   # expand_limits(y=0) +                        # Expand y range
+   # scale_y_continuous(breaks=0:20*4) +         # Set tick every 4
+    theme_bw() +
+    theme.custom +
+    theme(legend.justification=c(1,0),legend.position=c(1,0))               # Position legend in bottom right
+
+ggplot(df.age_speed, aes(x=Age, y=RT.mean.mean, colour=Speed, group=Speed)) + 
+    geom_errorbar(aes(ymin=RT.mean.mean-RT.mean.se, ymax=RT.mean.mean+RT.mean.se), colour="black", width=.1, position=pd) +
+    geom_line(position=pd) +
+    geom_point(position=pd, size=2) +    #21 is filled circle
+    xlab("Age (yrs)") +
+    ylab("RT") +
+    scale_colour_hue(name="Optic Flow Speed",    #Legend label, use darker colors
+                      breaks=c("2deg/s", "8deg/s"),
+                     labels=c("2 deg/s", "8 deg/s"),
+                     l=40) +                    # Use darker colors, lightness=40
+    ggtitle("The Effect of Age and Optic Flow Speed on Reaction times") +
+   # expand_limits(y=0) +                        # Expand y range
+   # scale_y_continuous(breaks=0:20*4) +         # Set tick every 4
+    theme_bw() +
+    theme.custom +
+   theme(legend.justification=c(1,0),legend.position=c(1,0)) 
+```
+
+### Plot of actual  *p*(corr) and predicted *p*(corr) by condition
+```{r p-corr-pattern-speed-plot-final, include=TRUE}
+df.bysub.bycond %>% 
+  group_by( Gender,Coh,Speed,PatternType) %>% 
+  summarize(pcorr.mean=mean(Pct.Corr),
+         pcorr.sd=sd(Pct.Corr),
+         RT.mean.mean=mean(RT.mean),
+         RT.mean.sd=sd(RT.mean)) -> 
+  df.bygender.bycond
+# add fitted line
+xseq<-seq(0.05,0.2,len=100)
+df.bysub.bycond$id<-with(df.bysub.bycond,interaction(Speed, PatternType,Gender, SubID))
+nd<-data.frame(rep(xseq,8*29),id=rep(levels(df.bysub.bycond$id),each=100))
+# levels(nd$id)<-levels(df.bysub.byage.bycond$id)
+mm <-matrix(unlist(strsplit(as.character(nd$id),"[.]")), ncol=4,byrow=TRUE)
+nd$Speed<-gsub("[[:space:]]", "",factor(mm[,1]))
+nd$PatternType<-factor(mm[,2])
+nd$Gender<-factor(mm[,3])
+nd$SubID<-factor(mm[,4])
+colnames(nd)[1] <- "Coh"
+
+nd$acc.pred<-predict(model.acc.logit,newdata=nd,type="response",se.fit=TRUE) # obtain predicted values
+nd$rt.pred<-exp(predict(model.log.rt2,newdata=nd, type="response", se.fit=TRUE)) # obtain predicted values
+
+nd2 <- nd %>%
+  group_by(Gender, Speed,Coh, PatternType) %>%
+  summarize(acc.pred.mean=mean(acc.pred),
+         acc.pred.se=sd(acc.pred)/sqrt(length(acc.pred)),
+         RT.pred.mean=mean(rt.pred),
+         RT.pred.se=sd(rt.pred)/sqrt(length(rt.pred)))
+df.bygender.bycond$Speed<-factor(df.bygender.bycond$Speed)
+# Plot of extual and predicted ACC
+title_text <- 'Percentage of correct responses by Coherence, Pattern, and Speed in adult participants'
+pic.acc<-ggplot(data=df.bygender.bycond, aes(x=Coh, y=pcorr.mean, color=Gender)) +
+  geom_point(aes(group=Gender, color=Gender),size=2) +
+  geom_line(data=nd2, aes(x=Coh,y=acc.pred.mean, group=Gender, color=Gender),size=1) +
+  facet_grid(facets = Speed ~ PatternType) +
+  labs(x="Coherence (%)", y="Percentage of Accuracy") +
+  ggtitle(title_text) +
+  scale_colour_hue(name="participant gender",    #Legend label, use darker colors
+                      breaks=c("Female", "Male"),
+                     labels=c("Female", "Male"))+
+  theme_bw() +
+  theme.custom +
+  xlim(0.05, 0.2) +
+  geom_hline(yintercept=0.5, linetype="dashed")
+
+pic.acc
+
+# Plot of extual and predicted ACC
+title_text <- 'Reaction Times by Coherence, Pattern, and Speed in adult participants'
+pic.rt<-ggplot(data=df.bygender.bycond, aes(x=Coh, y=RT.mean.mean, color=Gender)) +
+  geom_point(aes(group=Gender, color=Gender),size=2) +
+  geom_line(data=nd2, aes(x=Coh,y=RT.pred.mean, group=Gender, color=Gender),size=1) +
+  facet_grid(facets = Speed ~ PatternType) +
+  labs(x="Coherence (%)", y="Reaction times (s)") +
+  ggtitle(title_text) +
+  scale_colour_hue(name="participant gender",    #Legend label, use darker colors
+                     breaks=c("Female", "Male"),
+                     labels=c("Female", "Male"))+
+  theme_bw() +
+  theme.custom +
+  xlim(0.05, 0.2) +
+  geom_hline(yintercept=0.5, linetype="dashed")
+
+pic.rt
+```

@@ -59,7 +59,6 @@ table(df_a2$Race)
 df_child <- read.csv(file = "~/Documents/github/moco-psychophysics-child-adult/analysis/data/moco-child.csv", header = TRUE)
 df_adult <- read.csv(file = "~/Documents/github/moco-psychophysics-child-adult/analysis/data/moco-adult.csv", header = TRUE)
 df_adult$Speed <- factor(df_adult$Speed, labels = c("2 deg/s", "8 deg/s"))
-df_child$Speed <- factor(df_child$Speed, labels = c("2 deg/s", "8 deg/s"))
 df_child2 <- df_child %>%
    dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh)
 df_adult2 <- df_adult %>%
