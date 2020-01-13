@@ -49,7 +49,6 @@ df_child$Age <- df_child$AgeDays/365.25
 df_child$AgeYrs <- ordered(cut(df_child$AgeDays/365.25, 
                  breaks = c(5,6,7,8,9), 
                  labels = c("5 yrs", "6yrs", "7yrs", "8yrs")))
-df_child$Speed <- factor(df_child$Speed, labels = c("2 deg/s", "8 deg/s"))
 df_child <- df_child %>%
    dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Age, AgeYrs)
 df_adult <- df_adult %>%
@@ -362,11 +361,45 @@ anova(model.acc.full2,model.acc.full3)  # better fit
 ### logit link function
 ```{r acc-logit-interaction, eval=FALSE}
 form.acc.logit<- Acc ~ scale(Coh) + Speed + PatternType + scale(Age) + Gender + scale(Coh)*Speed + (1|SubID) #Age*Coh design related
-model.acc.logit <- glmer(formula = form.acc.logit, family=binomial(mafc.logit(2)),glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_child)
+model.acc.logit <- glmer(formula = form.acc.logit, family=binomial(mafc.logit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_child)
 summary(model.acc.logit)
 anova(model.acc.logit,model.acc.full3) 
 # ss <- getME(model.cloglog.interaction,c("theta","fixef"))
 # m2 <- update(model.cloglog.interaction,start=ss,control=glmerControl(optCtrl=list(maxfun=2e4)))
+
+```{r 95percent-CI}
+form.acc.logit2<- Acc ~ Coh + Speed + PatternType + Age + Gender + Coh*Speed + (1|SubID) #Age*Coh design related
+model.acc.logit2 <- glmer(formula = form.acc.logit2, family=binomial(mafc.logit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_child)
+summary(model.acc.logit2)
+anova(model.acc.logit2)
+# the same
+anova(model.acc.logit2,test="F")
+# Type I Analysis of Variance Table with Satterthwaite's method
+anova(model.acc.logit2, type=1)
+
+# get df
+lmerTest::anova(model.acc.logit2)
+lmerTest::anova(model.acc.logit2,ddf="Kenward-Roger")
+
+se <- sqrt(diag(vcov(model.acc.logit)))
+# table of estimates with 95% CI
+tab <- cbind(Est = fixef(model.acc.logit), LL = fixef(model.acc.logit) - 1.96 * se, UL = fixef(model.acc.logit) + 1.96 * se)
+
+## Further examination for the models
+### obtain confidence intervals for the coefficient estimates
+confint(model.acc.logit) 
+# get the exact 95% confidence interval for the coefficients b
+exp(confint(model.acc.logit))
+## use the parametric bootstrap to calculate confidence intervals
+confint(model.acc.logit, method="boot", nsim=1000, parm=1:3)
+# contrast within factor: pairwise comparison
+# check https://aosmith.rbind.io/2019/03/25/getting-started-with-emmeans/
+emmeans(model.acc.logit, Acc ~ gender)
+emm1.1<-emmeans(fit1, specs = pairwise ~ f1:f2, type = "response", adjust = "none")
+emm1.1$contrasts %>%
+     confint()
+emm2 = emmeans(fit1, specs = pairwise ~ f1|f2, type = "response")
+emm2
 ```
 
 <!-- wald.test(b = coef(model.logit.interaction), Sigma = vcov(model.logit.interaction), Terms = 4:6) -->
@@ -409,17 +442,7 @@ weibull(,shape=9.3969663,scale=0.9412456)
 # model.weibull.interaction <- vglm(formula = form.weibull.interaction, family = weibull(link='log'), data = df)
 # summary(model.weibull.interaction)
 
-```{r 95percent-CI}
-se <- sqrt(diag(vcov(model.acc.logit)))
-# table of estimates with 95% CI
-tab <- cbind(Est = fixef(model.acc.logit), LL = fixef(model.acc.logit) - 1.96 * se, UL = fixef(model.acc.logit) + 1.96 * se)
-```
 
-## Further examination for the models
-### obtain confidence intervals for the coefficient estimates
-confint(model.acc.logit) 
-# get the exact 95% confidence interval for the coefficients b
-exp(confint(model.logit.interaction))
 
 <!-- ### wald test -->
 <!-- ```{r comparsion} -->
@@ -506,24 +529,41 @@ exp(confint(model.logit.interaction))
 #### Plot of comparison of link functions
 ```{r p-corr-by-link-function}
 # Evaluate Speed by Coherence interaction
-spd <- df_child.summary %>%
+y_mean <- df_child.summary %>%
   group_by(Coh) %>%
-  summarize(Pct.Corr.mean = mean(Pct.Corr, na.rm=TRUE),
-            Pct.Corr.sem = sd(Pct.Corr, na.rm=TRUE)/sqrt( n() ))
+  summarize(Pct.Corr.mean = mean(Pct.Corr, na.rm=TRUE))
+      #      Pct.Corr.sem = sd(Pct.Corr, na.rm=TRUE)/sqrt( n() ))
 # limits = aes( ymax = Pct.Corr.mean + Pct.Corr.sem , ymin = Pct.Corr.mean - Pct.Corr.sem )
+x <- seq(0, 0.8, 0.01)
+data.frame(Coh=x, y_probit,y_logit,y_weibull)
+y_probit <- predict(model.acc.full3, list(Coh = x), type = "response")
+y_logit <- predict(model.acc.logit, list(Coh = x), type = "response")
+y_weibull <- predict(model.acc.cloglog, list(Coh = x), type = "response")
 
 p <- 
   ggplot( data=spd, aes(x=Coh, y=Pct.Corr.mean) ) +
   geom_line() +
   # geom_pointrange( limits ) +
   xlim(0,1) +
-  ylim(.4, 1) +
+  ylim(.6, 1) +
   ylab("p(corr)") +
   xlab("Coherence)") +
   theme_bw() +
   theme.custom +
-  geom_hline(yintercept=0.5, linetype="dashed")
+# geom_hline(yintercept=0.5, linetype="dashed")
+  geom_line(data = y_probit, aes(x = dates, y = Difference), color = "blue") +
 p
+
+lines(x, y_probit, lwd = 1.5, col = "steelblue",, lty = 2)
+lines(x, y_logit, lwd = 1.5, col = "green", lty = 2)
+lines(x, y_logit, lwd = 1.5, col = "red", lty = 2)
+
+# add a legend
+legend("topleft",
+       horiz = TRUE,
+       legend = c("Probit", "Logit","Weibull"),
+       col = c("steelblue", "green","red"), 
+       lty = c(1, 2))
 ```
 #### Plot of speed across patterns by age
 ```{r p-corr-by-speed-and-age-plot}
