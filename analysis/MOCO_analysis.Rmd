@@ -886,6 +886,13 @@ ctab_a <- cbind(OR=fixef(model_a.acc.logit),cc_a)
 # Exponentiate to get odds ratios:
 rtab_a <- exp(ctab_a)
 print(rtab_a,digits=5)
+# if with scale
+# sd of coh
+sd<-sd(df_adult$Coh)
+ctab_a <- cbind(OR=fixef(model_a.acc.logit)/sd,cc_a/sd)
+# Exponentiate to get odds ratios:
+rtab_a <- exp(ctab_a)
+print(rtab_a,digits=5)
 # 2 way is slightly different
 
 # If I want to use this model for inference I need to unstandardize the coefficients before reporting them to make them more easily interpretable.
@@ -896,9 +903,16 @@ jtools::summ(model_a.acc.logit, scale=TRUE, confint = TRUE,exp = TRUE, digits = 
 
 # way 4
 # The first step in the process is to get the standardized estimates and confidence intervals from the model. I use tidy() from package broom for this, which returns a data.frame of coefficients, statistical tests, and confidence intervals. 
-coef_st = tidy(fit2, effects = "fixed",
+library(broom)
+coef_st = tidy(model_a.acc.logit, effects = "fixed",
      conf.int = TRUE,
      conf.method = "profile")
+sd_all = map( select(df_adult, Coh), sd) %>% 
+     stack() %>%
+     mutate(ind = 'scale(Coh)')
+coef_unst_Coh = coef_st[2,] %>%
+     inner_join(., sd_all, by = c("term" = "ind") ) %>%
+     mutate_at( vars(estimate, conf.low, conf.high), funs(round( ./values, 4) ) ) 
 
 ## Further explanation of confint
 ### obtain confidence intervals for the coefficient estimates
