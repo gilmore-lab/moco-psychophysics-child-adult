@@ -653,6 +653,50 @@ p7 <-
 p7
 ```
 
+```{r rt-interaction-full, eval=FALSE}
+df_child$RT[which(df_child$RT==0 & df_child$Acc==FALSE)] <- NA
+form.log.rt<- log(RT) ~  Age+ Gender +Acc+ Coh*Speed*PatternType + (1|SubID)
+model.log.rt <- lmer(formula = form.log.rt, data = df_child,control=lmerControl(),na.action=na.exclude, REML=FALSE)
+summary(model.log.rt) #AIC 8858
+car::Anova(model.log.rt) # in package car
+```
+```{r rt-interaction-full, eval=FALSE}
+form.log.rt1<- log(RT) ~  Age+ Gender + Acc+Age*Coh+Age*Speed+Age*PatternType + Gender*Coh+Gender*Speed+Gender*PatternType+ (1|SubID)
+model.log.rt1 <- lmer(formula = form.log.rt1, data = df_child, REML=FALSE)
+summary(model.log.rt1) #AIC 8858
+car::Anova(model.log.rt1) # in package car
+anova(model.log.rt1, model.log.rt)
+```
+
+```{r rt-interaction-full, eval=FALSE}
+form.log.rt2<- log(RT) ~  Age + Acc+ Coh+ Speed+PatternType+ Age*Speed+ Gender*Coh+ (1|SubID)
+model.log.rt2 <- lmer(formula = form.log.rt2, data = df_child, REML=FALSE)
+summary(model.log.rt2) #AIC 8794
+car::Anova(model.log.rt2,type=3) # in package car
+```
+```{r get-df}
+# get df. One way afex does not work for glmer, try lmer to get df, which should be the same as the glmer
+car::Anova(model.log.rt2,type=3)
+car::Anova(model.log.rt2,ddf="Kenward-Roger")
+```
+```{r get-95%CI&OR-child}
+se <- sqrt(diag(vcov(model.log.rt2)))
+# table of estimates with 95% CI
+tab <- cbind(OR = fixef(model.log.rt2), LL = fixef(model.log.rt2) - 1.96 * se, UL = fixef(model.log.rt2) + 1.96 * se)
+# however, this result is different from the below
+print(exp(tab), digits=3)
+
+# confidence
+cc <- confint(model.log.rt2)  ## slow (~ 11 seconds) 
+exp(cc)
+r2glmm::r2beta(model.log.rt2, method = 'kr', partial = T)
+# effect size eta
+afex::aov
+lmerTest::
+```
+
+
+
 
 
 
@@ -1378,4 +1422,69 @@ pic.rt<-ggplot(data=df.bygender.bycond, aes(x=Coh, y=RT.mean.mean, color=Gender)
 
 pic.rt
 ```
+```{r rt-interaction-full, eval=FALSE}
+form.log.rt_a<- log(RT) ~  Gender+ Acc+ Coh+ Speed+PatternType+ Coh+ Speed*PatternType*Coh+  (1|SubID)
+model.log.rt_a <- lmer(formula = form.log.rt_a, data = df_adult, REML=FALSE)
+summary(model.log.rt_a) #AIC 8794
+car::Anova(model.log.rt_a,type=3) # in package car
+```
+```{r rt-interaction-full, eval=FALSE}
+form.log.rt1_a<- log(RT) ~  Acc+ Coh+ Speed+Coh*Speed+Coh*PatternType+ Gender*Coh+ Gender*Speed+ Gender*PatternType+ (1|SubID)
+model.log.rt1_a <- lmer(formula = form.log.rt1_a, data = df_adult, REML=FALSE)
+summary(model.log.rt1_a) #AIC 8794
+car::Anova(model.log.rt1_a,type=3) # in package car
+```
+```{r rt-interaction-full, eval=FALSE}
+form.log.rt1_a<- log(RT) ~  Acc+ Coh+ Speed+Coh*Speed+Coh*PatternType+ Gender*Coh+ Gender*PatternType+ (1|SubID)
+model.log.rt1_a <- lmer(formula = form.log.rt1_a, data = df_adult, REML=FALSE)
+summary(model.log.rt1_a) #AIC 8794
+car::Anova(model.log.rt1_a,type=3) # in package car
+```
+```{r get-df}
+# get df. One way afex does not work for glmer, try lmer to get df, which should be the same as the glmer
+car::Anova(model.log.rt2,type=3)
+car::Anova(model.log.rt2,ddf="Kenward-Roger")
+```
+```{r get-95%CI&OR-child}
+se <- sqrt(diag(vcov(model.log.rt1_a)))
+# table of estimates with 95% CI
+tab <- cbind(OR = fixef(model.log.rt1_a), LL = fixef(model.log.rt1_a) - 1.96 * se, UL = fixef(model.log.rt1_a) + 1.96 * se)
+# however, this result is different from the below
+print(exp(tab), digits=3)
+```
 
+
+
+
+
+
+
+
+
+
+
+
+
+#group comparison
+# Accuracy group comparison
+```{r acc-logit-initial, eval=FALSE}
+df_all$Speed <- factor(df_all$Speed, labels = c("2 deg/s", "8 deg/s"))
+df_all$SubID <- factor(df_all$SubID)
+df_all$group <- factor(df_all$group)
+form.acc.logit<- Acc ~ Gender + Coh + Speed + PatternType + group + group*Coh+group*PatternType+group*Speed+group*Gender + (1|SubID) 
+model.acc.logit <- glmer(formula = form.acc.logit, family=binomial(mafc.logit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_all)
+summary(model.acc.logit)
+car::Anova(model.acc.logit,type=3)
+se <- sqrt(diag(vcov(model.acc.logit)))
+# table of estimates with 95% CI
+tab <- cbind(OR = fixef(model.acc.logit), LL = fixef(model.acc.logit) - 1.96 * se, UL = fixef(model.acc.logit) + 1.96 * se)
+# however, this result is different from the below
+print(exp(tab), digits=4)
+```
+
+```{r get-df}
+model.acc.logit_lmer <- lmer(formula = form.acc.logit,  data = df_all)
+summary(model.acc.logit_lmer)
+anova(model.acc.logit_lmer)
+afex::mixed(Acc ~ Gender + Coh + Speed + PatternType + group + group*Coh+group*PatternType+group*Speed+group*Gender + (1|SubID) ,family=binomial, data=df_all, method = "PB")
+```
