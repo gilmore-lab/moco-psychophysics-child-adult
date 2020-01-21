@@ -45,15 +45,18 @@ df_child <- read.csv(file = "~/Documents/github/moco-psychophysics-child-adult/a
 df_adult <- read.csv(file = "~/Documents/github/moco-psychophysics-child-adult/analysis/data/moco-adult.csv", header = TRUE)
 df_adult$Speed <- factor(df_adult$Speed, labels = c("2 deg/s", "8 deg/s"))
 df_child$Speed <- factor(df_child$Speed, labels = c("2 deg/s", "8 deg/s"))
+df_child$SubID <- factor(df_child$SubID)
+df_adult$SubID <- factor(df_adult$SubID)
 df_child$Age <- df_child$AgeDays/365.25
 df_child$AgeYrs <- ordered(cut(df_child$AgeDays/365.25, 
                  breaks = c(5,6,7,8,9), 
                  labels = c("5 yrs", "6yrs", "7yrs", "8yrs")))
 df_child <- df_child %>%
-   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Age, AgeYrs)
+   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Age, AgeYrs, Response)
 df_adult <- df_adult %>%
-   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Age)
+   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Age, Response)
 df_all <- read.csv(file="~/Documents/github/moco-psychophysics-child-adult/analysis/CombinedData.csv", header=TRUE, sep=",")
+df_all$SubID <- factor(df_all$SubID)
 #### 30 children and 29 adults, each has 320 data. But the first adult has 480 data.
 ```
 
@@ -676,8 +679,7 @@ car::Anova(model.log.rt2,type=3) # in package car
 ```
 ```{r get-df}
 # get df. One way afex does not work for glmer, try lmer to get df, which should be the same as the glmer
-car::Anova(model.log.rt2,type=3)
-car::Anova(model.log.rt2,ddf="Kenward-Roger")
+afex::mixed(log(RT) ~  Age + Acc+ Coh+ Speed+PatternType+ Age*Speed+ Gender*Coh+ (1|SubID) , data=df_child, method = "S",  control = lmerControl(optCtrl = list(maxfun = 1e6)))
 ```
 ```{r get-95%CI&OR-child}
 se <- sqrt(diag(vcov(model.log.rt2)))
@@ -1442,8 +1444,10 @@ car::Anova(model.log.rt1_a,type=3) # in package car
 ```
 ```{r get-df}
 # get df. One way afex does not work for glmer, try lmer to get df, which should be the same as the glmer
-car::Anova(model.log.rt2,type=3)
-car::Anova(model.log.rt2,ddf="Kenward-Roger")
+car::Anova(model.log.rt1_a,type=3)
+car::Anova(model.log.rt1_a,ddf="Kenward-Roger")
+anova(model.log.rt1_a)
+afex::mixed(log(RT) ~  Acc+ Coh+ Speed+Coh*Speed+Coh*PatternType+ Gender*Coh+ Gender*PatternType+ (1|SubID) , data=df_adult, method = "S",  control = lmerControl(optCtrl = list(maxfun = 1e6)))
 ```
 ```{r get-95%CI&OR-child}
 se <- sqrt(diag(vcov(model.log.rt1_a)))
@@ -1465,13 +1469,16 @@ print(exp(tab), digits=3)
 
 
 
+
+
+
 #group comparison
 # Accuracy group comparison
 ```{r acc-logit-initial, eval=FALSE}
 df_all$Speed <- factor(df_all$Speed, labels = c("2 deg/s", "8 deg/s"))
 df_all$SubID <- factor(df_all$SubID)
 df_all$group <- factor(df_all$group)
-form.acc.logit<- Acc ~ Gender + Coh + Speed + PatternType + group + group*Coh+group*PatternType+group*Speed+group*Gender + (1|SubID) 
+form.acc.logit<- Acc ~ Gender + Coh + Speed + PatternType + group + group*Coh+group*Speed+ (1|SubID) 
 model.acc.logit <- glmer(formula = form.acc.logit, family=binomial(mafc.logit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_all)
 summary(model.acc.logit)
 car::Anova(model.acc.logit,type=3)
@@ -1486,5 +1493,329 @@ print(exp(tab), digits=4)
 model.acc.logit_lmer <- lmer(formula = form.acc.logit,  data = df_all)
 summary(model.acc.logit_lmer)
 anova(model.acc.logit_lmer)
-afex::mixed(Acc ~ Gender + Coh + Speed + PatternType + group + group*Coh+group*PatternType+group*Speed+group*Gender + (1|SubID) ,family=binomial, data=df_all, method = "PB")
+afex::mixed(RT ~ Gender + Coh + Speed + PatternType + group + group*Coh+ group*Speed + (1|SubID) , data=df_all, method = "S",  control = lmerControl(optCtrl = list(maxfun = 1e6)))
+```
+``` {r mean-sd}
+df %>% 
+  group_by(Gender, group, SubID) %>% 
+  summarize(N.corr = sum(Acc), 
+            N.tot = n(), 
+            Pct.Corr = N.corr/N.tot,
+            RT.mean=mean(RT, na.rm = T),
+            RT.sd=sd(RT, na.rm = T)) -> 
+  df4
+df.bysub.bycond <- df4 %>%
+  group_by(group) %>%
+  summarise(pcorr.mean=mean(Pct.Corr),
+         pcorr.sd=sd(Pct.Corr),
+         RT.mean.mean=mean(RT.mean),
+         RT.mean.sd=sd(RT.mean) )
+
+df.bysub.bycond <- df4 %>%
+  group_by(Gender) %>%
+  summarise(pcorr.mean=mean(Pct.Corr),
+         pcorr.sd=sd(Pct.Corr),
+         RT.mean.mean=mean(RT.mean),
+         RT.mean.sd=sd(RT.mean) )
+df.bysub.bycond
+
+df.bysub.bycond <- df3 %>%
+  group_by(Speed) %>%
+  summarise(pcorr.mean=mean(Pct.Corr),
+         pcorr.sd=sd(Pct.Corr),
+         RT.mean.mean=mean(RT.mean),
+         RT.mean.sd=sd(RT.mean) )
+df.bysub.bycond
+
+df.bysub.bycond <- df3 %>%
+  group_by(PatternType) %>%
+  summarise(pcorr.mean=mean(Pct.Corr),
+         pcorr.sd=sd(Pct.Corr),
+         RT.mean.mean=mean(RT.mean),
+         RT.mean.sd=sd(RT.mean) )
+df.bysub.bycond
+
+df.bysub.bycond <- df3 %>%
+  group_by(Coh) %>%
+  summarise(pcorr.mean=mean(Pct.Corr),
+         pcorr.sd=sd(Pct.Corr),
+         RT.mean.mean=mean(RT.mean),
+         RT.mean.sd=sd(RT.mean) )
+df.bysub.bycond
+```
+### Plot of actual  *p*(corr) and predicted *p*(corr) by condition
+```{r p-corr-pattern-speed-plot-final, include=TRUE}
+df_child3 <- df_child %>%
+  filter(Group=="linear-radial coh [.15 .3 .45 .6]") %>%
+   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh)
+df_adult2 <- df_adult %>%
+   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh)
+df2<-bind_rows(df_child3, df_adult2) 
+df2<- df2 %>%
+  mutate(group=c(rep('child',nrow(df_child3)),rep('adult',nrow(df_adult2))))
+
+df2 %>% 
+  group_by(SubID, group, PatternType, Coh, Speed) %>% 
+  summarize(N.corr = sum(Acc), 
+            N.tot = n(), 
+            Pct.Corr = N.corr/N.tot,
+            RT.mean=mean(RT, na.rm = T),
+            RT.sd=sd(RT, na.rm = T)) -> 
+  df.summary
+df.summary %>% 
+  group_by( group,Coh,Speed,PatternType) %>% 
+  summarize(pcorr.mean=mean(Pct.Corr),
+         pcorr.sd=sd(Pct.Corr),
+         RT.mean.mean=mean(RT.mean),
+         RT.mean.sd=sd(RT.mean)) -> 
+  df.bygroup.bycond
+# add fitted line
+xseq<-seq(0.05,0.6,len=100)
+df.summary$id<-with(df.summary,interaction(Speed, PatternType, group, SubID))
+nd<-data.frame(rep(xseq,8*54),id=rep(levels(df.summary$id),each=100))
+# levels(nd$id)<-levels(df.bysub.byage.bycond$id)
+mm <-matrix(unlist(strsplit(as.character(nd$id),"[.]")), ncol=4,byrow=TRUE)
+nd$Speed<-gsub("[[:space:]]", "",factor(mm[,1]))
+nd$PatternType<-factor(mm[,2])
+nd$group<-factor(mm[,3])
+nd$SubID<-factor(mm[,4])
+colnames(nd)[1] <- "Coh"
+
+model.acc.logit.dropgender <- update(model.acc.logit2, . ~ . - Gender)
+nd$acc.pred<-predict(model.acc.logit.dropgender,newdata=nd,type="response",se.fit=TRUE) # obtain predicted values
+model.fixed.rt.dropgender <- update(model.fixed.rt2, . ~ . - Gender)
+nd$rt.pred<-exp(predict(model.fixed.rt.dropgender,newdata=nd, type="response", se.fit=TRUE)) # obtain predicted values
+
+nd2 <- nd %>%
+  group_by(group, Speed,Coh, PatternType) %>%
+  summarize(acc.pred.mean=mean(acc.pred),
+         acc.pred.se=sd(acc.pred)/sqrt(length(acc.pred)),
+         RT.pred.mean=mean(rt.pred),
+         RT.pred.se=sd(rt.pred)/sqrt(length(rt.pred)))
+# df.bygender.bycond$Speed<-factor(df.bygender.bycond$Speed)
+```
+```{r plot-acc}
+# Plot of ectual and predicted ACC
+title_text <- 'Percentage of correct responses by Coherence, Pattern, and Speed'
+pic.acc<-ggplot(data=df.bygroup.bycond, aes(x=Coh, y=pcorr.mean, color=group)) +
+  geom_point(aes(group=group, color=group),size=2) +
+  geom_line(data=nd2, aes(x=Coh,y=acc.pred.mean, group=group, color=group),size=1) +
+  facet_grid(facets = Speed ~ PatternType) +
+  labs(x="Coherence (%)", y="Percentage of Accuracy") +
+  ggtitle(title_text) +
+  scale_colour_hue(name="participant gender",    #Legend label, use darker colors
+                      breaks=c("Female", "Male"),
+                      labels=c("Female", "Male"))+
+  theme_bw() +
+  theme.custom +
+  xlim(0.05, 0.6) +
+  geom_hline(yintercept=0.5, linetype="dashed")
+
+pic.acc
+```
+
+```{r plot-rt}
+# Plot of extual and predicted ACC
+title_text <- 'Reaction Times by Coherence, Pattern, and Speed'
+pic.rt<-ggplot(data=df.bygroup.bycond, aes(x=Coh, y=RT.mean.mean, color=group)) +
+  geom_point(aes(group=group, color=group),size=2) +
+  geom_line(data=nd2, aes(x=Coh,y=RT.pred.mean, group=group, color=group),size=1) +
+  facet_grid(facets = Speed ~ PatternType) +
+  labs(x="Coherence (%)", y="Reaction times (s)") +
+  ggtitle(title_text) +
+  scale_colour_hue(name="group",    #Legend label, use darker colors
+                      breaks=c("child", "adult"),
+                     labels=c("Child", "Adult"))+
+  theme_bw() +
+  theme.custom +
+  xlim(0.05, 0.6) 
+
+pic.rt
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# SDT
+```{r get-SDT}
+# library(psycho)
+# Let's simulate three participants with different results at a perceptual detection task
+df_child2 <- df_child %>%
+   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Response, AgeYrs) %>%
+   dplyr::filter(Coh==0.15) %>%
+   dplyr::filter(Response %in% c("L","R"))
+str(df_child2)
+
+df_adult2 <- df_adult %>%
+   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Response) %>%
+   dplyr::filter(Coh==0.15)  %>%
+   dplyr::filter(Response %in% c("L","R"))
+df_adult2$SubID<-factor(df_adult2$SubID)
+str(df_adult2)
+
+df2<-rbind(df_child2, df_adult2) 
+df.new<- df2 %>%
+  mutate(group=c(rep('child',nrow(df_child2)),rep('adult',nrow(df_adult2)))) %>%
+  filter(Response != "NA") %>%
+  group_by(SubID, group, Coh, PatternType, Speed, Gender) %>%
+  summarize(n_hit = sum(Response=="L" & Acc=="TRUE"),
+            n_fa  = sum(Response=="L" & Acc=="FALSE"),
+            n_miss = sum(Response=="R" & Acc=="FALSE"),
+            n_cr = sum(Response=="R" & Acc=="TRUE"))
+
+indices <- neuropsychology::dprime(df.new$n_hit, df.new$n_fa, df.new$n_miss, df.new$n_cr)
+df.sdt <- cbind(df.new, indices)
+```
+
+``` {r anova-SDT-d'}
+aov <- with(df.sdt, aov(dprime ~ Speed * PatternType * group * Gender +
+                       Error(SubID / (Speed * PatternType)))
+)
+summary(aov)
+# better solution I currently find
+library(afex)
+df.sdt$SubID<-as.integer(df.sdt$SubID) 
+a_d <- aov_ez(id="SubID", dv = "dprime", df.sdt, between = c("Gender", "group"),within=c("Speed","PatternType") )
+summary(a_d)
+knitr::kable(nice(a_d))
+# What about the estimated marginal means of the design?
+library(emmeans)
+emmeans(a_d, ~Gender* group * Speed*PatternType)
+# What about the ‘main effects?
+em1<-emmeans(a_d, ~Gender)
+em2<-emmeans(a_d, ~group)
+em2<-emmeans(a_d, ~Speed)
+em2<-emmeans(a_d, ~PatternType)
+# And pairwise difference among levels of inference validity?
+em1
+pairs(em1)
+em2
+pairs(em2)
+df.sdt %>%
+   dplyr::group_by(group) %>%
+   summarize(mean=mean(dprime))
+```
+``` {r anova-SDT-c}
+# better solution I currently find
+library(afex)
+a <- aov_ez(id="SubID", dv = "c", df.sdt, between = c("Gender", "group"),within=c("Speed","PatternType") )
+summary(a)
+knitr::kable(nice(a))
+# What about the estimated marginal means of the design?
+library(emmeans)
+emmeans(a, ~Gender* group * Speed*PatternType)
+# What about the ‘main effects?
+em1<-emmeans(a, ~Gender)
+em2<-emmeans(a, ~group)
+em2<-emmeans(a, ~Speed)
+em2<-emmeans(a, ~PatternType)
+em2<-emmeans(a, ~PatternType*Gender)
+em3<-emmeans(a, ~group*Speed)
+# And pairwise difference among levels of inference validity?
+em1
+pairs(em1)
+em2
+pairs(em2)
+em3
+pairs(em3)
+```
+
+```{r anova-plot}
+# Plotting results of aov_ez
+emmip(a, Group~ PatternType|Speed, CIs = TRUE)
+emmip(a, group~Speed, CIs = TRUE)
+emmip(a, Gender~PatternType, CIs = TRUE)
+```
+``` {r anova-SDT_child}
+df.new_c<- df_child %>%
+   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Response, AgeYrs, Group) %>%
+  dplyr::filter(Group == "linear-radial coh [.15 .3 .45 .6]") %>%
+   dplyr::filter(Response %in% c("L","R")) 
+df.new_c$Coh<-factor(df.new_c$Coh)
+df.new_c<- df.new_c %>%
+  group_by(SubID, Coh, PatternType, Speed, Gender, AgeYrs) %>%
+  summarize(n_hit = sum(Response=="L" & Acc=="TRUE"),
+            n_fa  = sum(Response=="L" & Acc=="FALSE"),
+            n_miss = sum(Response=="R" & Acc=="FALSE"),
+            n_cr = sum(Response=="R" & Acc=="TRUE"))
+
+indices_c <- neuropsychology::dprime(df.new_c$n_hit, df.new_c$n_fa, df.new_c$n_miss, df.new_c$n_cr)
+df.sdt_c <- cbind(df.new_c, indices_c)
+
+df.sdt_c$SubID<-as.integer(df.sdt_c$SubID) 
+a2 <- aov_ez(id="SubID", dv = "dprime", df.sdt_c, between = c("Gender", "AgeYrs"),within=c("Speed","PatternType","Coh") )
+summary(a2)
+knitr::kable(nice(a2))
+# What about the estimated marginal means of the design?
+library(emmeans)
+emmeans(a2, ~Gender* AgeYrs * Speed*PatternType)
+# What about the ‘main effects?
+em1<-emmeans(a2, ~Gender)
+em2<-emmeans(a2, ~AgeYrs)
+em2<-emmeans(a2, ~Speed)
+em2<-emmeans(a2, ~PatternType)
+# And pairwise difference among levels of inference validity?
+em1
+pairs(em1)
+em2
+pairs(em2)
+```
+``` {r anova-plot}
+# Plotting results of aov_ez
+emmip(a, group ~ PatternType|speed, CIs = TRUE)
+```
+
+``` {r anova-plot}
+myData <- aggregate(df.new$dprime,
+    by = list(PatternType = df.new$PatternType, Gender = df.new$Gender),
+    FUN = function(x) c(mean = mean(x), sd = sd(x),
+                        n = length(x)))
+myData <- do.call(data.frame, myData)
+myData$se <- myData$x.sd / sqrt(myData$x.n)
+ggplot(myData, aes(x=PatternType, y=x.mean, group=Gender, fill=Gender)) + 
+  geom_bar(stat="identity",  
+           position=position_dodge()) +
+  geom_errorbar(aes(ymin=x.mean-se, ymax=x.mean+se), width=.2,position=position_dodge(.9))  + 
+  labs( y = "Sensitivity (d')")+
+   theme_classic()
+
+myData <- aggregate(df.new$dprime,
+    by = list(PatternType = df.new$PatternType, Speed = df.new$Speed),
+    FUN = function(x) c(mean = mean(x), sd = sd(x),
+                        n = length(x)))
+myData <- do.call(data.frame, myData)
+myData$se <- myData$x.sd / sqrt(myData$x.n)
+myData$Speed<-factor(myData$Speed, levels=c("2","8"),labels= c("2 deg/sec","8 deg/sec"))
+ggplot(myData, aes(x=PatternType, y=x.mean, group=Speed, fill=Speed)) + 
+  geom_bar(stat="identity",  
+           position=position_dodge()) +
+  geom_errorbar(aes(ymin=x.mean-se, ymax=x.mean+se), width=.2,position=position_dodge(.9))  + 
+  labs( y = "Sensitivity (d')")+
+   theme_classic()
+
+myData <- aggregate(df.new$c,
+    by = list(Speed = df.new$Speed, Gender = df.new$Gender),
+    FUN = function(x) c(mean = mean(x), sd = sd(x),
+                        n = length(x)))
+myData <- do.call(data.frame, myData)
+myData$se <- myData$x.sd / sqrt(myData$x.n)
+myData$Speed<-factor(myData$Speed, levels=c("2","8"),labels= c("2 deg/sec","8 deg/sec"))
+ggplot(myData, aes(x=Speed, y=x.mean, group=Gender, fill=Gender)) + 
+  geom_bar(stat="identity",  
+           position=position_dodge()) +
+  geom_errorbar(aes(ymin=x.mean-se, ymax=x.mean+se), width=.2,position=position_dodge(.9))  + 
+  labs( y = "Response bias (c)", x = "Speed")+
+   theme_classic()
 ```
