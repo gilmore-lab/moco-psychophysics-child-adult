@@ -50,7 +50,7 @@ df_adult$SubID <- factor(df_adult$SubID)
 df_child$Age <- df_child$AgeDays/365.25
 df_child$AgeYrs <- ordered(cut(df_child$AgeDays/365.25, 
                  breaks = c(5,6,7,8,9), 
-                 labels = c("5 yrs", "6yrs", "7yrs", "8yrs")))
+                 labels = c("5-year-old", "6-year-old", "7-year-old", "8-year-old")))
 df_child <- df_child %>%
    dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Age, AgeYrs, Response)
 df_adult <- df_adult %>%
@@ -136,7 +136,7 @@ y_lbl <- 'p(corr)'
 title_text <- 'p(corr) by subj'
 
 # lines for each subj
-p1 <- ggplot(df.summary, aes(Coh, Pct.Corr)) +
+p1 <- ggplot(df_child.summary, aes(Coh, Pct.Corr)) +
    geom_line(aes(group=SubID, color=AgeYrs)) +
    labs(x="Coherence", y=y_lbl) +
    ggtitle(title_text) +
@@ -146,7 +146,7 @@ p1 <- ggplot(df.summary, aes(Coh, Pct.Corr)) +
    geom_hline(yintercept=0.5, linetype="dashed")
 
  sd = 3
- df.summary <- df.summary %>%
+ df_child.summary <- df_child.summary %>%
    group_by(Coh) %>%
    mutate(pcorr.lower_bound = pcorr.mean-sd*pcorr.sd,pcorr.upper_bound=pcorr.mean+sd*pcorr.sd)
 
@@ -194,16 +194,15 @@ p2
 
 ### Plot of *p*(corr) by condition
 ```{r p-corr-pattern-speed-plot, include=TRUE}
-y_lbl <- 'p(corr)'
-title_text <- 'p(corr) by Coherence, Pattern, and Speed'
-df.bysub.bycond$Speed <- factor(df.bysub.bycond$Speed, labels = c("2 deg/s", "8 deg/s"))
+y_lbl <- 'Percentage of Correct Responses (%)'
+title_text <- 'Accuracy by Coherence, Pattern, and Speed in child datasets'
 
 sd = 3
-df.bysub.bycond <- df.bysub.bycond %>%
+df_child.bysub.bycond <- df_child.bysub.bycond %>%
   group_by(PatternType, Speed,Coh) %>%
   mutate(lower_bound = pcorr.mean-sd*pcorr.sd,upper_bound=pcorr.mean+sd*pcorr.sd)
 # Plot for all subs
-p.corr <- ggplot(data=df.bysub.bycond, aes(x=Coh, y=Pct.Corr))
+p.corr <- ggplot(data=df_child.bysub.bycond, aes(x=Coh, y=Pct.Corr*100))
 p.corr <- p.corr +
   geom_line(aes(group=SubID, color=AgeYrs)) +
   facet_grid(facets = Speed ~ PatternType) +
@@ -355,7 +354,7 @@ anova(model.acc.full1,model.acc.full2)  # better fit
 # summary(model.acc.full.new)
 
 ```{r acc-probit-full, eval=FALSE}
-form.full3<- Acc ~ scale(Coh) + Speed + PatternType + scale(Age) + Gender + scale(Coh)*Speed  + (1|SubID) #Age*Coh design related
+form.full3<- Acc ~ scale(Coh) + Speed + PatternType + scale(Age) + Gender + scale(Coh)*Speed  ++scale(Age)*Speed+ (1|SubID) #Age*Coh design related
 model.acc.full3 <- glmer(formula = form.full3, family=binomial(mafc.probit(2)),glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_child)
 summary(model.acc.full3)
 anova(model.acc.full2,model.acc.full3)  # better fit
@@ -363,7 +362,7 @@ anova(model.acc.full2,model.acc.full3)  # better fit
 ```
 ### logit link function
 ```{r acc-logit-interaction, eval=FALSE}
-form.acc.logit<- Acc ~ scale(Coh) + Speed + PatternType + scale(Age) + Gender + scale(Coh)*Speed + (1|SubID) #Age*Coh design related
+form.acc.logit<- Acc ~ scale(Coh) + Speed + PatternType + scale(Age) + Gender + scale(Coh)*Speed +scale(Age)*Speed+ (1|SubID) #Age*Coh design related
 model.acc.logit <- glmer(formula = form.acc.logit, family=binomial(mafc.logit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_child)
 summary(model.acc.logit)
 anova(model.acc.logit,model.acc.full3) 
@@ -373,16 +372,17 @@ anova(model.acc.logit,model.acc.full3)
 
 ```{r get-coefficient-child}
 # get coefficient
-str(df_child)
-form.acc.logit2<- Acc ~ Coh + Speed + PatternType + Age + Gender + Coh*Speed + (1|SubID) #Age*Coh design related
+# str(df_child)
+form.acc.logit2<- Acc ~ Coh + Speed + PatternType + Age + Gender + Coh*Speed + +Age*Speed+ (1|SubID) #Age*Coh design related
 model.acc.logit2 <- glmer(formula = form.acc.logit2, family=binomial(mafc.logit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_child)
 summary(model.acc.logit2)
 anova(model.acc.logit2)
 lmerTest::anova(model.acc.logit2)
-car::Anova(model.acc.logit2)  # this is betterm because F is said not work in glmer model
+car::Anova(model.acc.logit2, type=3)  # this is betterm because F is said not work in glmer model
 car::Anova(model.acc.logit) # there is slight difference between scaled and unscaled
-afex::mixed(Acc ~ Coh + Speed + PatternType + Age + Gender + Coh*Speed + (1|SubID),family=binomial, data=df_child, method = "PB")
+afex::mixed(RT ~ Coh + Speed + PatternType + Age + Gender + Coh*Speed +Age*Speed+ (1|SubID), data=df_child, method = "S",  control = lmerControl(optCtrl = list(maxfun = 1e6)))
 afex::mixed(Acc ~ scale(Coh) + Speed + PatternType + scale(Age) + Gender + scale(Coh)*Speed + (1|SubID),family=binomial, data=df_child, method = "PB")
+knitr::kable(model.acc.logit2)
 ## the same 
 # anova(model.acc.logit2,test="F")
 ## Type I Analysis of Variance Table with Satterthwaite's method
@@ -402,7 +402,7 @@ se <- sqrt(diag(vcov(model.acc.logit2)))
 # table of estimates with 95% CI
 tab <- cbind(OR = fixef(model.acc.logit2), LL = fixef(model.acc.logit2) - 1.96 * se, UL = fixef(model.acc.logit2) + 1.96 * se)
 # however, this result is different from the below
-print(exp(tab), digits=3)
+print(exp(tab), digits=5)
 
 # way 2
 cc <- confint(model.acc.logit2)  ## slow (~ 11 seconds)
@@ -411,7 +411,7 @@ cc2 <- confint(model.acc.logit)  # test whether diff between scaled and unscaled
 ctab <- cbind(OR=fixef(model.acc.logit2),cc)
 # Exponentiate to get odds ratios:
 rtab <- exp(ctab)
-print(rtab,digits=3)
+print(rtab,digits=4)
 # 2 way is slightly different
 
 # way 3
@@ -428,13 +428,27 @@ confint(model.acc.logit2, method="boot", nsim=1000, parm=1:3)
 ```
 <!-- wald.test(b = coef(model.logit.interaction), Sigma = vcov(model.logit.interaction), Terms = 4:6) -->
 AIC 5715, smaller AIC
+## plot
+```{r plot the fitted line}
+#predict gives the predicted value in terms of logits
+plot.dat <- data.frame(prob= df_child$Acc/sum(df_child$Acc),
+                       age = df_child$Age,
+                       fit = predict(model.acc.logit2, df_child))
+#convert those logit values to probabilities
+plot.dat$fit_prob <- exp(plot.dat$fit)/(1+exp(plot.dat$fit))
+
+library(ggplot2)
+ggplot(plot.dat, aes(x=age, y=prob)) + 
+  geom_point() +
+  geom_line(aes(x=age, y=fit_prob))
+```
 
 ``` {r acc-post-hoc}
 # contrast within factor: pairwise comparison
 # emeans cannot be installed in this r version
 # check https://aosmith.rbind.io/2019/03/25/getting-started-with-emmeans/
 library(emmeans)
-emmeans(model.acc.logit2, Acc ~ gender)
+emmeans(model.acc.logit2, Acc ~ Gender)
 emm1.1<-emmeans(fit1, specs = pairwise ~ f1:f2, type = "response", adjust = "none")
 emm1.1$contrasts %>%
      confint()
@@ -451,7 +465,7 @@ summary(glht(model.acc.logit2, mcp(Coh="Tukey")))
 # Can fit a Weibull function, but use log contrast as variable 
 # see http://finzi.psych.upenn.edu/library/psyphy/html/mafc.html
 
-form.acc.cloglog<- Acc ~ scale(Coh) + Speed + PatternType + scale(Age) + Gender + scale(Coh)*Speed + (1|SubID)
+form.acc.cloglog<- Acc ~ scale(Coh) + Speed + PatternType + scale(Age) + Gender + scale(Coh)*Speed + scale(Age)*Speed+  (1|SubID)
 model.acc.cloglog <- glmer(formula = form.acc.cloglog, family=binomial(mafc.cloglog(2)),glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)),  data = df_child)
 summary(model.acc.cloglog)
 anova(model.acc.logit,model.acc.cloglog) 
@@ -608,36 +622,204 @@ legend("topleft",
        lty = c(1, 2))
 ```
 #### Plot of speed across patterns by age
-```{r p-corr-by-speed-and-age-plot}
-# Evaluate Speed by Coherence interaction
-spd.by.coh <- df.bysub.bycond %>%
-  group_by(Speed, Coh, AgeYrs) %>%
-  summarize(Pct.Corr.mean = mean(Pct.Corr, na.rm=TRUE),
-            Pct.Corr.sem = sd(Pct.Corr, na.rm=TRUE)/sqrt( n() ))
+```{r p-corr-by-speed_pattern-age-plot}
+df_child2.bysub.bycond <- df_child %>% 
+  filter(Group=="linear-radial coh [.15 .3 .45 .6]") %>%
+  group_by(SubID, Age, Gender, AgeYrs, PatternType, Speed, Coh) %>% 
+  summarize(N.corr = sum(Acc), 
+            N.tot = n(), 
+            Pct.Corr = N.corr/N.tot,
+            RT.mean=mean(RT, na.rm = T),
+            RT.sd=sd(RT, na.rm = T))
 
-limits = aes( ymax = Pct.Corr.mean + Pct.Corr.sem , ymin = Pct.Corr.mean - Pct.Corr.sem )
+df_p1_c_acc <- df_child2.bysub.bycond %>%
+    group_by(PatternType,Speed,Coh, AgeYrs) %>%
+    summarize( Pct.Corr.mean = mean(Pct.Corr, na.rm=TRUE))
+# it is very strange to say the sd of accuracy
+# limits = aes( ymax = Pct.Corr.mean + Pct.Corr.sem , ymin = Pct.Corr.mean - Pct.Corr.sem )
 
-p6 <- 
-  ggplot( data=spd.by.coh, aes(x=Coh, y=Pct.Corr.mean, color = AgeYrs) ) +
-  facet_grid( facets = . ~ Speed ) +
+p1_c_acc <- 
+  ggplot(data=df_p1_c_acc , aes(x=Coh, y=Pct.Corr.mean*100, color = AgeYrs) ) +
+  facet_grid( facets = PatternType ~ Speed ) +
   geom_line() +
-  geom_pointrange( limits ) +
-  xlim(0,1) +
-  ylim(.4, 1) +
-  ylab("p(corr)") +
-  xlab("Coherence)") +
+  geom_point() +
+#  geom_pointrange( limits ) +
+  xlim(0.15,0.60) +
+  ylim(55, 100) +
+  ylab("Percentage of correct responses (%)") +
+  xlab("Coherence level") +
   theme_bw() +
   theme.custom +
-  geom_hline(yintercept=0.5, linetype="dashed")
-p6
+  scale_colour_brewer(palette = "Set1") + 
+  scale_x_continuous(breaks=seq(0.15, 0.60, 0.15))
+  # geom_hline(yintercept=0.5, linetype="dashed")
+p1_c_acc
+```
+#### Plot of interaction effects
+```{r coh_speed_interaction_child}
+# Plot of coherence by speed
+plot_fit<-function(m,focal_var,inter_var=NULL,RE=NULL,offset=NULL,n=20,n_core=4,boot_mer=FALSE){
+  require(arm)  
+  dat<-model.frame(m)
+  #turn all character variable to factor
+  dat<-as.data.frame(lapply(dat,function(x){
+    if(is.character(x)){
+      as.factor(x)
+    }
+    else{x}
+  }))
+  #make a sequence from the focal variable
+  x1<-list(seq(min(dat[,focal_var]),max(dat[,focal_var]),length=n))
+  #grab the names and unique values of the interacting variables
+  isInter<-which(names(dat)%in%inter_var)
+  if(length(isInter)==1){
+    x2<-list(unique(dat[,isInter]))
+    names(x2)<-inter_var
+  }
+  if(length(isInter)>1){
+    x2<-lapply(dat[,isInter],unique)
+  }
+  if(length(isInter)==0){
+    x2<-NULL
+  }
+  #all_var<-x1
+  #add the focal variable to this list
+  all_var<-c(x1,x2)
+  #expand.grid on it
+  names(all_var)[1]<-focal_var
+  all_var<-expand.grid(all_var)
+     
+  #remove varying variables and non-predictors and potentially offset variables
+  if(!is.null(offset)){
+    off_name <- grep("^offset",names(dat),value=TRUE)#this is needed because of the weird offset formatting in the model.frame
+  }
+  dat_red<-dat[,-c(1,which(names(dat)%in%c(focal_var,inter_var,RE,"X.weights."))),drop=FALSE]
+  #if there are no variables left over that need averaging
+  if(dim(dat_red)[2]==0){
+    new_dat<-all_var
+    name_f <- NULL
+  }
+  else{
+    #otherwise add these extra variables, numeric variable will take their mean values
+    #and factor variables will take their first level before being averaged out lines 86-87
+    fixed<-lapply(dat_red,function(x) if(is.numeric(x)) mean(x) else factor(levels(x)[1],levels = levels(x)))
+    #the number of rows in the new_dat frame
+    fixed<-lapply(fixed,rep,dim(all_var)[1])
+    #create the new_dat frame starting with the varying focal variable and potential interactions
+    new_dat<-cbind(all_var,as.data.frame(fixed)) 
+    #get the name of the variable to average over
+    name_f<-names(dat_red)[sapply(dat_red,function(x) ifelse(is.factor(x),TRUE,FALSE))]
+  }  
+  #add an offset column set at 0 if needed
+  if(!is.null(offset)){
+    new_dat[,offset] <- 0
+  }
+       
+     
+  #get the predicted values
+  cl<-class(m)[1]
+  if(cl=="lm"){
+    pred<-predict(m,newdata = new_dat,se.fit=TRUE)
+  }
+     
+  if(cl=="glm" | cl=="negbin"){
+    #predicted values on the link scale
+    pred<-predict(m,newdata=new_dat,type="link",se.fit=TRUE)
+  }
+  if(cl=="glmerMod" | cl=="lmerMod"){
+    pred<-list(fit=predict(m,newdata=new_dat,type="link",re.form=~0))
+    #for bootstrapped CI
+    new_dat<-cbind(new_dat,rep(0,dim(new_dat)[1]))
+    names(new_dat)[dim(new_dat)[2]]<-as.character(formula(m)[[2]])
+    mm<-model.matrix(formula(m,fixed.only=TRUE),new_dat)
+  }
+  #average over potential categorical variables  
+  avg_over <- 0 #for cases where no averaging is to be done
+  if(length(name_f)>0){
+    if(cl=="glmerMod" | cl=="lmerMod"){
+      coef_f<-lapply(name_f,function(x) fixef(m)[grep(paste0("^",x),names(fixef(m)))])
+    }
+    else{
+      coef_f<-lapply(name_f,function(x) coef(m)[grep(paste0("^",x),names(coef(m)))])
+    }    
+    avg_over <- sum(unlist(lapply(coef_f,function(x) mean(c(0,x))))) #averging out all factor effects
+    pred$fit<-pred$fit + avg_over
+  }
+    
+  #to get the back-transform values get the inverse link function
+  linkinv<-family(m)$linkinv
+     
+  #get the back transformed prediction together with the 95% CI for LM and GLM
+  if(cl=="glm" | cl=="lm" | cl=="negbin"){
+    pred$pred<-linkinv(pred$fit)
+    pred$LC<-linkinv(pred$fit-1.96*pred$se.fit)
+    pred$UC<-linkinv(pred$fit+1.96*pred$se.fit)
+  }
+     
+  #for (G)LMM need to use either bootstrapped CI or use approximate
+  #standard error from the variance-covariance matrix
+  #see ?predict.merMod and http://glmm.wikidot.com/faq#predconf
+  #note that the bootstrapped option is recommended by the lme4 authors
+  if(cl=="glmerMod" | cl=="lmerMod"){
+    pred$pred<-linkinv(pred$fit)
+    if(boot_mer){
+      predFun<-function(.) mm%*%fixef(.)+avg_over
+      bb<-bootMer(m,FUN=predFun,nsim=200,parallel="multicore",ncpus=n_core) #do this 200 times
+      bb$t<-apply(bb$t,1,function(x) linkinv(x))
+      #as we did this 200 times the 95% CI will be bordered by the 5th and 195th value
+      bb_se<-apply(bb$t,1,function(x) x[order(x)][c(5,195)])
+      pred$LC<-bb_se[1,]
+      pred$UC<-bb_se[2,] 
+    }
+    else{
+      se <- sqrt(diag(mm %*% tcrossprod(vcov(m),mm)))
+      pred$LC <- linkinv(pred$fit - 1.96 * se)
+      pred$UC <- linkinv(pred$fit + 1.96 * se)
+    }
+  }
+     
+  #the output
+  out<-as.data.frame(cbind(new_dat[,1:(length(inter_var)+1)],pred$LC,pred$pred,pred$UC))
+  names(out)<-c(names(new_dat)[1:(length(inter_var)+1)],"LC","Pred","UC")
+  return(out)
+}
+
+pred<-plot_fit(model.acc.logit2,focal_var = "Coh",inter_var = "Speed",RE = "SubID")
+pred <- df_child %>% 
+  group_by(SubID, Speed, Coh) %>% 
+  summarize(N.corr = sum(Acc), 
+            N.tot = n(), 
+            Pct.Corr = N.corr/N.tot) 
+plot(Pct.Corr*100~Coh,df_p1_c_acc_speed_coh,col=c("red","blue")[df_p1_c_acc_speed_coh$Speed],pch=16,xlab="Coherence level",ylab="Percentage of Correct response (%)")
+lines(pred$Speed[1:20], pred$Pred[1:20],col="red",lwd=3)
+lines(LC~C,pred[1:20,],col="red",lwd=2,lty=2)
+lines(UC~C,pred[1:20,],col="red",lwd=2,lty=2)
+lines(Pred~C,pred[21:40,],col="green",lwd=3)
+lines(LC~C,pred[21:40,],col="green",lwd=2,lty=2)
+lines(UC~C,pred[21:40,],col="green",lwd=2,lty=2)
+lines(Pred~C,pred[41:60,],col="blue",lwd=3)
+lines(LC~C,pred[41:60,],col="blue",lwd=2,lty=2)
+lines(UC~C,pred[41:60,],col="blue",lwd=2,lty=2)
+legend("topleft",legend = c("Low-speed optic flow", "high-speed optic flow"),col=c("red","blue"),pch=16,lwd=3,title = "N addition",bty="n")
+## using ggplot to plot
+p <- ggplot(data =  df_p1_c_acc_speed_coh, 
+       aes(y = Pct.Corr*100, x = Coh, color = Speed, group = Speed) ) + 
+    geom_point() +
+  geom_line(data=pred[1:20,], aes(x=Coh, y = Pred*100), color= "red") + 
+  geom_line(data=pred[21:40,], aes(x=Coh,Pred*100), color = "blue") 
+p
 ```
 
-# Plot of coherence by pattern across age
-```{r p-corr-by-pattern-and-age-plot, include=TRUE}
-patt.by.coh <- df.bysub.bycond %>%
-  group_by(PatternType, Coh, AgeYrs) %>%
+
+```{r }
+df_p1_c_acc_speed_coh <- df_child %>% 
+  group_by(SubID, PatternType, Speed, Coh) %>% 
+  summarize(N.corr = sum(Acc), 
+            N.tot = n(), 
+            Pct.Corr = N.corr/N.tot)  %>% 
+  group_by(Speed, Coh) %>%
   summarize(Pct.Corr.mean = mean(Pct.Corr, na.rm=TRUE),
-            Pct.Corr.sem = sd(Pct.Corr, na.rm=TRUE)/sqrt( n() ))
+            Pct.Corr.sem = sd(Pct.Corr, na.rm=TRUE)/sqrt(30))
 
 limits = aes( ymax = Pct.Corr.mean + Pct.Corr.sem , ymin = Pct.Corr.mean - Pct.Corr.sem )
 
@@ -655,6 +837,9 @@ p7 <-
   geom_hline(yintercept=0.5, linetype="dashed")
 p7
 ```
+```
+
+
 
 ```{r rt-interaction-full, eval=FALSE}
 df_child$RT[which(df_child$RT==0 & df_child$Acc==FALSE)] <- NA
@@ -697,7 +882,32 @@ afex::aov
 lmerTest::
 ```
 
+#### Plot of speed across patterns by age
+```{r rt-by-speed_pattern-age-plot}
+df_p1_c_rt <- df_child %>% 
+  filter(Group=="linear-radial coh [.15 .3 .45 .6]") %>%
+  group_by(PatternType,Speed,Coh, AgeYrs) %>% 
+  summarize(RT.mean=mean(RT, na.rm = T),
+            RT.se=sd(RT, na.rm = T)/sqrt(25))
+limits = aes( ymax = RT.mean + RT.se , ymin = RT.mean - RT.se )
 
+p1_c_rt <- 
+  ggplot(data=df_p1_c_rt , aes(x=Coh, y=RT.mean, color = AgeYrs) ) +
+  facet_grid( facets = PatternType ~ Speed ) +
+  geom_line() +
+  geom_pointrange(limits) +
+  xlim(0.15,0.60) +
+  ylim(1, 4.5) +
+  ylab("Reaction times (s)") +
+  xlab("Coherence level") +
+  theme_bw() +
+  theme.custom +
+  scale_colour_brewer(palette = "Set1") + 
+  scale_x_continuous(breaks=seq(0.15, 0.60, 0.15))
+  # geom_hline(yintercept=0.5, linetype="dashed")
+p1_c_rt
+
+```
 
 
 
@@ -715,84 +925,6 @@ lmerTest::
 
 # adult data
 ### it is the data exclude subj 14
-### plot of *p*(Corr) by subj
-```{r p-corr-subj-mean-plot}
-# Plot theme, customizations 
-y_lbl <- 'p(corr)'
-title_text <- 'p(corr) by subj'
-
-# lines for each subj
-p1 <- ggplot(df.summary, aes(Coh, Pct.Corr)) +
-   geom_line(aes(group=SubID, color=Age)) +
-   labs(x="Coherence", y=y_lbl) +
-   ggtitle(title_text) +
-   theme_bw() +
-   theme.custom +
-   xlim(0.05, 0.2) +
-   geom_hline(yintercept=0.5, linetype="dashed")
-
- sd = 3
- df.summary <- df.summary %>%
-   group_by(Coh) %>%
-   mutate(pcorr.lower_bound = pcorr.mean-sd*pcorr.sd,pcorr.upper_bound=pcorr.mean+sd*pcorr.sd)
-
-#confidence band
-p1 <- p1 +
-   geom_line(aes(Coh, pcorr.mean), size = 2) +
-   geom_ribbon(aes(ymin = pcorr.lower_bound, ymax =pcorr.upper_bound), fill = "grey70",
-                 alpha=0.5)       #transparency
-
- p1
- # I can try geom_smooth function next time
-# from the plot, we can see the accuracy of subj 1088 has below average percentage of accuracy. But it is not significant
-```
-
-```{r exclude-outlier-subject}
-# summary statistics of df2 by condition
-df_adult %>% 
-  group_by(Gender, Age, SubID, PatternType, Speed, Coh) %>% 
-  summarize(N.corr = sum(Acc), 
-            N.tot = n(), 
-            Pct.Corr = N.corr/N.tot,
-            RT.mean=mean(RT, na.rm = T),
-            RT.sd=sd(RT, na.rm = T)) -> 
-  df_adult.bysub.bycond
-df_adult.bysub.bycond <- df_adult.bysub.bycond %>%
-  group_by(PatternType,Speed,Coh) %>%
-  mutate(pcorr.mean=mean(Pct.Corr),
-         pcorr.sd=sd(Pct.Corr),
-         RT.mean.mean=mean(RT.mean),
-         RT.mean.sd=sd(RT.mean) )
-```
-
-### Plot of *p*(corr) by condition
-```{r p-corr-pattern-speed-plot, include=TRUE}
-title_text <- 'p(corr) by Coherence, Pattern, and Speed'
-df.bysub.bycond$Speed <- factor(df.bysub.bycond$Speed, labels = c("2 deg/s", "8 deg/s"))
-
-sd = 3
-df.bysub.bycond <- df.bysub.bycond %>%
-  group_by(PatternType, Speed,Coh) %>%
-  mutate(lower_bound = pcorr.mean-sd*pcorr.sd,upper_bound=pcorr.mean+sd*pcorr.sd)
-# Plot for all subs
-p.corr <- ggplot(data=df.bysub.bycond, aes(x=Coh, y=Pct.Corr))
-p.corr <- p.corr +
-  geom_line(aes(group=SubID, color=Age)) +
-  facet_grid(facets = Speed ~ PatternType) +
-  labs(x="Coherence", y=y_lbl) +
-  ggtitle(title_text) +
-  theme_bw() +
-  theme.custom +
-  xlim(0.05, 0.2) +
-  geom_hline(yintercept=0.5, linetype="dashed")
-# confidence band
-p.corr <- p.corr +
-  geom_line(aes(Coh, pcorr.mean), size = 2) +
-  geom_ribbon(aes(ymin = lower_bound, ymax =upper_bound), fill = "grey70",
-                alpha=0.5)
-p.corr
-```
-
 #Generalized linear mixed effects model with a probit link/ logit link/ weibull model
 Generalized linear mixed effects model 
 The level 1 (i) is accuracy/RT in each condition for each subject. The level 2 (j) is each subject. The random effects in this model are SubID, Gender and AgeYrs. Fixed effects are Speed, PatternType, Coh, and their interaction
@@ -1004,12 +1136,6 @@ model_a.acc.weibull <- glmer(formula = form_a.probit, family=binomial(mafc.weib(
 summary(model_a.acc.weibull)
 anova(model_a.acc.logit,model_a.acc.weibull)
 ```
-
-## Further examination for the models
-### obtain confidence intervals for the coefficient estimates
-confint(model.acc.logit) 
-# get the exact 95% confidence interval for the coefficients b
-exp(confint(model.logit.interaction))
 
 ```{r plot-sensitivity}
 # It is important to check that your model is not influenced by one or a small set of observations. This might indicate your model is over fit or that your model is sensitive to the particular observations included in the model.
@@ -1470,8 +1596,6 @@ print(exp(tab), digits=3)
 
 
 
-
-
 #group comparison
 # Accuracy group comparison
 ```{r acc-logit-initial, eval=FALSE}
@@ -1542,6 +1666,30 @@ df.bysub.bycond <- df3 %>%
          RT.mean.mean=mean(RT.mean),
          RT.mean.sd=sd(RT.mean) )
 df.bysub.bycond
+```
+```{r acc-logit-4-category, eval=FALSE}
+# convert the coherence level in adults and children datasets to be categorical, from 1-4
+df_child3<-df_child %>% 
+  filter(Group=="linear-radial coh [.15 .3 .45 .6]")
+df_child3$Coh_cg <- ordered(factor(df_child3$Coh, 
+                 levels = c("1st", "2nd", "3rd", "4th")))
+df_adult$Coh_cg <- ordered(factor(df_adult$Coh, 
+                 levels = c("1st", "2nd", "3rd", "4th")))
+df_all2<-bind_rows(df_child3, df_adult) 
+df_all2<- df_all2 %>%
+  mutate(group=c(rep('child',nrow(df_child3)),rep('adult',nrow(df_adult))))
+df_all2$Speed <- factor(df_all2$Speed, labels = c("2 deg/s", "8 deg/s"))
+df_all2$SubID <- factor(df_all2$SubID)
+df_all2$group <- factor(df_all2$group)
+form.acc.logit<- Acc ~ Gender + Coh + Speed + PatternType + group + group*Coh+group*Speed+ (1|SubID) 
+model.acc.logit <- glmer(formula = form.acc.logit, family=binomial(mafc.logit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_all)
+summary(model.acc.logit)
+car::Anova(model.acc.logit,type=3)
+se <- sqrt(diag(vcov(model.acc.logit)))
+# table of estimates with 95% CI
+tab <- cbind(OR = fixef(model.acc.logit), LL = fixef(model.acc.logit) - 1.96 * se, UL = fixef(model.acc.logit) + 1.96 * se)
+# however, this result is different from the below
+print(exp(tab), digits=4)
 ```
 ### Plot of actual  *p*(corr) and predicted *p*(corr) by condition
 ```{r p-corr-pattern-speed-plot-final, include=TRUE}
