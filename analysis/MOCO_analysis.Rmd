@@ -634,23 +634,25 @@ df_child2.bysub.bycond <- df_child %>%
 
 df_p1_c_acc <- df_child2.bysub.bycond %>%
     group_by(PatternType,Speed,Coh, AgeYrs) %>%
-    summarize( Pct.Corr.mean = mean(Pct.Corr, na.rm=TRUE))
+    summarize( n=n(),
+               Pct.Corr.mean = 100* mean(Pct.Corr, na.rm=TRUE),
+               Pct.Corr.ci = 100*1.96*sd(Pct.Corr, na.rm=TRUE)/sqrt(length(Pct.Corr)))
 # it is very strange to say the sd of accuracy
-# limits = aes( ymax = Pct.Corr.mean + Pct.Corr.sem , ymin = Pct.Corr.mean - Pct.Corr.sem )
-
+limits = aes( ymax = Pct.Corr.mean + Pct.Corr.ci , ymin = Pct.Corr.mean - Pct.Corr.ci)
+pd <- position_dodge(0.1)
 p1_c_acc <- 
-  ggplot(data=df_p1_c_acc , aes(x=Coh, y=Pct.Corr.mean*100, color = AgeYrs) ) +
+  ggplot(data=df_p1_c_acc , aes(x=Coh, y=Pct.Corr.mean, color = AgeYrs) ) +
   facet_grid( facets = PatternType ~ Speed ) +
   geom_line() +
-  geom_point() +
-#  geom_pointrange( limits ) +
+  # geom_point() +
+  geom_pointrange( limits) +
   xlim(0.15,0.60) +
-  ylim(55, 100) +
+  ylim(42, 105) +
   ylab("Percentage of correct responses (%)") +
   xlab("Coherence level") +
   theme_bw() +
-  theme.custom +
-  scale_colour_brewer(palette = "Set1") + 
+  theme.custom  +
+  scale_colour_brewer(palette = "Set1")  +
   scale_x_continuous(breaks=seq(0.15, 0.60, 0.15))
   # geom_hline(yintercept=0.5, linetype="dashed")
 p1_c_acc
@@ -811,32 +813,64 @@ p
 ```
 
 
-```{r }
-df_p1_c_acc_speed_coh <- df_child %>% 
-  group_by(SubID, PatternType, Speed, Coh) %>% 
+```{r plot-acc-coh-speed}
+df_p2_c_acc_speed_coh <- df_child %>% 
+  filter(Group=="linear-radial coh [.15 .3 .45 .6]") %>%
+  group_by(SubID, Speed, Coh) %>% 
   summarize(N.corr = sum(Acc), 
             N.tot = n(), 
             Pct.Corr = N.corr/N.tot)  %>% 
   group_by(Speed, Coh) %>%
-  summarize(Pct.Corr.mean = mean(Pct.Corr, na.rm=TRUE),
-            Pct.Corr.sem = sd(Pct.Corr, na.rm=TRUE)/sqrt(30))
-
-limits = aes( ymax = Pct.Corr.mean + Pct.Corr.sem , ymin = Pct.Corr.mean - Pct.Corr.sem )
-
-p7 <- 
-  ggplot( data=patt.by.coh, aes(x=Coh, y=Pct.Corr.mean, color = AgeYrs) ) +
-  facet_grid( facets = ~ PatternType ) +
-  geom_line() +
-  geom_pointrange( limits ) +
-  xlim(0, 1) +
-  ylim(.4, 1) +
-  ylab("p(corr)") +
-  xlab("Coherence)") +
+  summarize(n=length(Pct.Corr),
+            Pct.Corr.mean = 100*mean(Pct.Corr, na.rm=TRUE),
+            Pct.Corr.ci = 1.96*100*sd(Pct.Corr, na.rm=TRUE)/sqrt(length(Pct.Corr)))  #computation of the standard error of the mean, ci is 1.96*sem
+p2_c_acc_speed_coh <- 
+  ggplot(data=df_p2_c_acc_speed_coh, aes(x=Coh, y=Pct.Corr.mean, fill = factor(Speed)) , width = 0.1) +
+  geom_bar(stat="identity", position = position_dodge()) +
+  geom_errorbar(aes(ymin = Pct.Corr.mean - Pct.Corr.ci, ymax = Pct.Corr.mean + Pct.Corr.ci), width=.1,position=position_dodge(.9)) +
+  ggtitle("Speed X Coherence Interaction in Children") +
+  ylab("Percentage of Accuracy (%)") +
+  xlab("Coherence levels") +
+  coord_cartesian(ylim=c(65,100)) +
   theme_bw() +
-  theme.custom +
-  geom_hline(yintercept=0.5, linetype="dashed")
-p7
+  theme.custom + # Position legend in bottom right
+  scale_colour_brewer(palette = "Set1")  +
+  theme(legend.position=c(0.1,0.9)) +
+  theme(plot.title = element_text(hjust = 0.5)) 
+p2_c_acc_speed_coh
 ```
+```{r plot-acc-age-speed}
+df_p3_c_acc_speed_age <- df_child %>% 
+  # filter(Group=="linear-radial coh [.15 .3 .45 .6]") %>%
+  group_by(SubID, Speed, Age) %>% 
+  summarize(N.corr = sum(Acc), 
+            N.tot = n(), 
+            Pct.Corr.mean = N.corr/N.tot)  
+df_p4_c_acc_speed_age <-df_p3_c_acc_speed_age  %>% 
+  group_by(Speed, Age) %>%
+  summarize(n=length(Pct.Corr),
+            Pct.Corr.mean = 100*mean(Pct.Corr, na.rm=TRUE),
+            Pct.Corr.ci = 1.96*100*sd(Pct.Corr, na.rm=TRUE)/sqrt(length(Pct.Corr)))  #computation of the standard error of the mean, ci is 1.96*sem
+p <- ggplot(data =  df_p3_c_acc_speed_age, 
+       aes(y = Pct.Corr.mean, x = Age, color = Speed, group = Speed) ) + 
+    geom_point() +
+  geom_line(df_p4_c_acc_speed_age, aes(x=Coh, y = Pred*100), color= "red") + 
+  geom_line(data=pred[21:40,], aes(x=Coh,Pred*100), color = "blue") 
+p
+p2_c_acc_speed_coh <- 
+  ggplot(data=df_p2_c_acc_speed_coh, aes(x=Coh, y=Pct.Corr.mean, fill = factor(Speed)) , width = 0.1) +
+  geom_bar(stat="identity", position = position_dodge()) +
+  geom_errorbar(aes(ymin = Pct.Corr.mean - Pct.Corr.ci, ymax = Pct.Corr.mean + Pct.Corr.ci), width=.1,position=position_dodge(.9)) +
+  ggtitle("Speed X Coherence Interaction in Children") +
+  ylab("Percentage of Accuracy (%)") +
+  xlab("Coherence levels") +
+  coord_cartesian(ylim=c(65,100)) +
+  theme_bw() +
+  theme.custom + # Position legend in bottom right
+  scale_colour_brewer(palette = "Set1")  +
+  theme(legend.position=c(0.1,0.9)) +
+  theme(plot.title = element_text(hjust = 0.5)) 
+p2_c_acc_speed_coh
 ```
 
 
@@ -887,17 +921,26 @@ lmerTest::
 df_p1_c_rt <- df_child %>% 
   filter(Group=="linear-radial coh [.15 .3 .45 .6]") %>%
   group_by(PatternType,Speed,Coh, AgeYrs) %>% 
-  summarize(RT.mean=mean(RT, na.rm = T),
-            RT.se=sd(RT, na.rm = T)/sqrt(25))
-limits = aes( ymax = RT.mean + RT.se , ymin = RT.mean - RT.se )
+  summarize(n=length(RT),
+            RT.mean=mean(RT, na.rm = T),
+            RT.ci=1.96*sd(RT, na.rm = T)/sqrt(length(RT)))
 
+df_p1_c_rt2 <- df_child %>% 
+  filter(Group=="linear-radial coh [.15 .3 .45 .6]") %>%
+  group_by(SubID, Age, Gender, AgeYrs, PatternType, Speed, Coh) %>% 
+  summarize( RT.bysub=mean(RT, na.rm = T))%>%
+    group_by(PatternType,Speed,Coh, AgeYrs) %>%
+    summarize( n=n(),
+               RT.mean =  mean(RT.bysub, na.rm=TRUE),
+               RT.ci = 1.96*sd(RT.bysub, na.rm=TRUE)/sqrt(length(RT.bysub)))  # mean is the same, however the se is different.
+limits = aes( ymax = RT.mean + RT.ci , ymin = RT.mean - RT.ci )
 p1_c_rt <- 
-  ggplot(data=df_p1_c_rt , aes(x=Coh, y=RT.mean, color = AgeYrs) ) +
+  ggplot(data=df_p1_c_rt2 , aes(x=Coh, y=RT.mean, color = AgeYrs) ) +
   facet_grid( facets = PatternType ~ Speed ) +
   geom_line() +
   geom_pointrange(limits) +
   xlim(0.15,0.60) +
-  ylim(1, 4.5) +
+  ylim(1.1, 5.1) +
   ylab("Reaction times (s)") +
   xlab("Coherence level") +
   theme_bw() +
@@ -908,7 +951,32 @@ p1_c_rt <-
 p1_c_rt
 
 ```
-
+```{r plot-rt-coh-speed}
+df_p2_c_rt_speed_coh <- df_child %>% 
+  filter(Group=="linear-radial coh [.15 .3 .45 .6]") %>%
+  group_by(SubID, Speed, Coh) %>% 
+  summarize(N.corr = sum(Acc), 
+            N.tot = n(), 
+            Pct.Corr = N.corr/N.tot)  %>% 
+  group_by(Speed, Coh) %>%
+  summarize(n=length(Pct.Corr),
+            Pct.Corr.mean = 100*mean(Pct.Corr, na.rm=TRUE),
+            Pct.Corr.ci = 1.96*100*sd(Pct.Corr, na.rm=TRUE)/sqrt(length(Pct.Corr)))  #computation of the standard error of the mean, ci is 1.96*sem
+p2_c_rt_speed_coh <- 
+  ggplot(data=df_p2_c_rt_speed_coh, aes(x=Coh, y=Pct.Corr.mean, fill = factor(Speed)) , width = 0.1) +
+  geom_bar(stat="identity", position = position_dodge()) +
+  geom_errorbar(aes(ymin = Pct.Corr.mean - Pct.Corr.ci, ymax = Pct.Corr.mean + Pct.Corr.ci), width=.1,position=position_dodge(.9)) +
+  ggtitle("Speed X Coherence Interaction in Children") +
+  ylab("Percentage of Accuracy (%)") +
+  xlab("Coherence levels") +
+  coord_cartesian(ylim=c(65,100)) +
+  theme_bw() +
+  theme.custom + # Position legend in bottom right
+  scale_colour_brewer(palette = "Set1")  +
+  theme(legend.position=c(0.1,0.9)) +
+  theme(plot.title = element_text(hjust = 0.5)) 
+p2_c_rt_speed_coh
+```
 
 
 
@@ -1160,327 +1228,81 @@ ggplot(data.frame(lev=hatvalues(model.fixed.rt2),pearson=residuals(model.fixed.r
 ```
 
 ### plotting
-#### Plot of speed across patterns by age
-```{r p-corr-by-speed-and-age-plot}
-# Evaluate Speed by Coherence interaction
-spd.by.coh <- df.bysub.bycond %>%
-  group_by(Speed, Coh, AgeYrs) %>%
-  summarize(Pct.Corr.mean = mean(Pct.Corr, na.rm=TRUE),
-            Pct.Corr.sem = sd(Pct.Corr, na.rm=TRUE)/sqrt( n() ))
-limits = aes( ymax = Pct.Corr.mean + Pct.Corr.sem , ymin = Pct.Corr.mean - Pct.Corr.sem )
-p6 <- 
-  ggplot( data=spd.by.coh, aes(x=Coh, y=Pct.Corr.mean, color = AgeYrs) ) +
-  facet_grid( facets = . ~ Speed ) +
-  geom_line() +
-  geom_pointrange( limits ) +
-  xlim(0,1) +
-  ylim(.4, 1) +
-  ylab("p(corr)") +
-  xlab("Coherence)") +
-  theme_bw() +
-  theme.custom +
-  geom_hline(yintercept=0.5, linetype="dashed")
-p6
-```
-
-# Plot of coherence by pattern across age
-```{r p-corr-by-pattern-and-age-plot, include=TRUE}
-patt.by.coh <- df.bysub.bycond %>%
-  group_by(PatternType, Coh, AgeYrs) %>%
-  summarize(Pct.Corr.mean = mean(Pct.Corr, na.rm=TRUE),
-            Pct.Corr.sem = sd(Pct.Corr, na.rm=TRUE)/sqrt( n() ))
-
-limits = aes( ymax = Pct.Corr.mean + Pct.Corr.sem , ymin = Pct.Corr.mean - Pct.Corr.sem )
-
-p7 <- 
-  ggplot( data=patt.by.coh, aes(x=Coh, y=Pct.Corr.mean, color = AgeYrs) ) +
-  facet_grid( facets = ~ PatternType ) +
-  geom_line() +
-  geom_pointrange( limits ) +
-  xlim(0, 1) +
-  ylim(.4, 1) +
-  ylab("p(corr)") +
-  xlab("Coherence)") +
-  theme_bw() +
-  theme.custom +
-  geom_hline(yintercept=0.5, linetype="dashed")
-p7
-```
-
-
-### plot of mean and sd of Speed and patterntype
-```{r plot-speed-patterntype}
-df2 %>% 
-  filter(Group=="linear-radial coh [.15 .3 .45 .6]") %>%
-  group_by(AgeYrs, Gender, Age, SubID, PatternType, Speed, Coh) %>% 
+#### Plot of Coh across patterns by age
+```{r plot-acc-coh-pattern}
+df_p2_a_acc_coh_pat <- df_adult %>% 
+  group_by(SubID, PatternType, Coh) %>% 
   summarize(N.corr = sum(Acc), 
             N.tot = n(), 
-            Pct.Corr = N.corr/N.tot,
-            RT.mean=mean(RT, na.rm = T),
-            RT.sd=sd(RT, na.rm = T)) -> df3
-            
-df.speed_Pattern <- df3 %>%
-  group_by(Speed,PatternType) %>%
-  summarize(pcorr.mean=mean(Pct.Corr),
-         pcorr.se=sd(Pct.Corr)/sqrt(length(Pct.Corr)),
-         RT.mean.mean=mean(RT.mean),
-         RT.mean.se=sd(RT.mean)/sqrt(length(RT.mean)))
-pd <- position_dodge(0.00) # The errorbars overlapped, so use position_dodge to move them horizontally
-ggplot(df.speed_Pattern, aes(x=Speed, y=pcorr.mean, colour=PatternType, group=PatternType)) + 
-    geom_errorbar(aes(ymin=pcorr.mean-pcorr.se, ymax=pcorr.mean+pcorr.se), colour="black", width=.1, position=pd) +
-    geom_line(position=pd) +
-    geom_point(position=pd, size=2) +    #21 is filled circle
-    xlab("Speed (deg/s)") +
-    ylab("Percentage of Accuracy") +
-    scale_colour_hue(name="Optic Flow Pattern",    #Legend label, use darker colors
-                     breaks=c("linear", "radial"),
-                     labels=c("Linear motion", "Radial Motion"),
-                     l=40) +                    # Use darker colors, lightness=40
-    ggtitle("The Effect of Optic Flow Speed and Pattern Type on Accuracy") +
-   # expand_limits(y=0) +                        # Expand y range
-   # scale_y_continuous(breaks=0:20*4) +         # Set tick every 4
-    theme_bw() +
-    theme.custom 
-   # theme(legend.justification=c(1,0),legend.position=c(1,0))               # Position legend in bottom right
-
-ggplot(df.speed_Pattern, aes(x=Speed, y=RT.mean.mean, colour=PatternType, group=PatternType)) + 
-    geom_errorbar(aes(ymin=RT.mean.mean-RT.mean.se, ymax=RT.mean.mean+RT.mean.se), colour="black", width=.1, position=pd) +
-    geom_line(position=pd) +
-    geom_point(position=pd, size=2) +    #21 is filled circle
-    xlab("Speed (deg/s)") +
-    ylab("RT") +
-    scale_colour_hue(name="Optic Flow Pattern",    #Legend label, use darker colors
-                     breaks=c("linear", "radial"),
-                     labels=c("Linear motion", "Radial Motion"),
-                     l=40) +                    # Use darker colors, lightness=40
-    ggtitle("The Effect of Optic Flow Speed and Pattern Type on reaction times") +
-   # expand_limits(y=0) +                        # Expand y range
-   # scale_y_continuous(breaks=0:20*4) +         # Set tick every 4
-    theme_bw() +
-    theme.custom +
-   theme(legend.justification=c(1,0),legend.position=c(1,0)) 
+            Pct.Corr = N.corr/N.tot)  %>% 
+  group_by(Coh, PatternType) %>%
+  summarize(n=length(Pct.Corr),
+            Pct.Corr.mean = 100*mean(Pct.Corr, na.rm=TRUE),
+            Pct.Corr.sem = 100*sd(Pct.Corr, na.rm=TRUE)/sqrt(length(Pct.Corr)))  #computation of the standard error of the mean, ci is 1.96*sem
+p2_a_acc_pat_coh <- 
+  ggplot(data=df_p2_a_acc_coh_pat, aes(x=factor(Coh), y=Pct.Corr.mean, fill = factor(PatternType)) , width = 0.1) +
+  geom_bar(stat="identity", position = position_dodge()) +
+  geom_errorbar(aes(ymin = Pct.Corr.mean - Pct.Corr.sem, ymax = Pct.Corr.mean + Pct.Corr.sem), width=.1,position=position_dodge(.9)) +
+  ggtitle("Pattern X Coherence Interaction in Adults") +
+  ylab("Percentage of Accuracy (%)") +
+  xlab("Coherence levels") +
+  coord_cartesian(ylim=c(45,100)) +
+  theme_bw() +
+  theme.custom + # Position legend in bottom right
+  scale_colour_brewer(palette = "Set1")  +
+  theme(legend.position=c(0.1,0.9)) +
+  theme(plot.title = element_text(hjust = 0.5)) 
+p2_a_acc_pat_coh 
 ```
-### plot of mean and sd of Speed and Coh
-```{r p-corr-speed-coh}
-df.speed_coh <- df.bysub.bycond %>%
-  group_by(Speed,Coh) %>%
-  summarize(pcorr.mean=mean(Pct.Corr),
-         pcorr.se=sd(Pct.Corr)/sqrt(length(Pct.Corr)),
-         RT.mean.mean=mean(RT.mean),
-         RT.mean.se=sd(RT.mean)/sqrt(length(RT.mean)))
-         
-pd <- position_dodge(0.01) # The errorbars overlapped, so use position_dodge to move them horizontally
-ggplot(df.speed_coh, aes(x=Coh, y=pcorr.mean, colour=Speed, group=Speed)) + 
-    geom_errorbar(aes(ymin=pcorr.mean-pcorr.se, ymax=pcorr.mean+pcorr.se), colour="black", width=.1, position=pd)+
-    geom_line(position=pd) +
-    geom_point(position=pd,size=2) +    #21 is filled circle
-    xlab("Coherence (%)") +
-    ylab("Percentage of Accuracy") +
-    scale_colour_hue(name="Optic Flow Speed",    #Legend label, use darker colors
-                     breaks=c("2deg/s", "8deg/s"),
-                     labels=c("2 deg/s", "8 deg/s"),
-                     l=40) +                    # Use darker colors, lightness=40
-    ggtitle("The Effect of Optic Flow Speed and Coherence on Accuracy") +
-   # expand_limits(y=0) +                        # Expand y range
-   # scale_y_continuous(breaks=0:20*4) +         # Set tick every 4
-    theme_bw() +
-    theme.custom +
-    theme(legend.justification=c(1,0),legend.position=c(1,0))               # Position legend in bottom right
-
-ggplot(df.speed_coh, aes(x=Coh, y=RT.mean.mean, colour=Speed, group=Speed)) + 
-    geom_errorbar(aes(ymin=RT.mean.mean-RT.mean.se, ymax=RT.mean.mean+RT.mean.se), colour="black", width=.1, position=pd) +
-    geom_line(position=pd) +
-    geom_point(position=pd, size=2) +    #21 is filled circle
-    xlab("Cohernce (%))") +
-    ylab("RT") +
-    scale_colour_hue(name="Optic Flow Pattern",    #Legend label, use darker colors
-                     breaks=c("2deg/s", "8deg/s"),
-                     labels=c("2 deg/s", "8 deg/s"),
-                     l=40) +                    # Use darker colors, lightness=40
-    ggtitle("The Effect of Optic Flow Speed and Coherence on Reaction times") +
-   # expand_limits(y=0) +                        # Expand y range
-   # scale_y_continuous(breaks=0:20*4) +         # Set tick every 4
-    theme_bw() +
-    theme.custom +
-   theme(legend.justification=c(1,0),legend.position=c(1,0)) 
+```{r plot-acc-speed-gender}
+df_p2_a_acc_speed_gender <- df_adult %>% 
+  group_by(SubID, Speed, Gender) %>% 
+  summarize(N.corr = sum(Acc), 
+            N.tot = n(), 
+            Pct.Corr = N.corr/N.tot)  %>% 
+  group_by(Speed, Gender) %>%
+  summarize(n=length(Pct.Corr),
+            Pct.Corr.mean = 100*mean(Pct.Corr, na.rm=TRUE),
+            Pct.Corr.sem = 100*sd(Pct.Corr, na.rm=TRUE)/sqrt(length(Pct.Corr)))  #computation of the standard error of the mean, ci is 1.96*sem
+p2_a_acc_speed_gen <- 
+  ggplot(data=df_p2_a_acc_speed_gender, aes(x=factor(Speed), y=Pct.Corr.mean, fill = factor(Gender)) ) +
+  geom_bar(stat="identity", position = position_dodge(), width = 0.5) +
+  geom_errorbar(aes(ymin = Pct.Corr.mean - Pct.Corr.sem, ymax = Pct.Corr.mean + Pct.Corr.sem), width=.1,position=position_dodge(.5)) +
+  ggtitle("Speed X Gender Interaction in Adults") +
+  ylab("Percentage of Accuracy (%)") +
+  xlab("Optic flow Speed") +
+  coord_cartesian(ylim=c(40,100)) +
+  theme_bw() +
+  theme.custom + # Position legend in bottom right
+  scale_colour_brewer(palette = "Set1")  +
+  theme(legend.position=c(0.1,0.9)) +
+  theme(plot.title = element_text(hjust = 0.5)) 
+p2_a_acc_speed_gen 
 ```
-### plot of mean and sd of Patterntype and Coh
-```{r p-corr-pattern-coh}
-df.pattern_coh <- df.bysub.bycond %>%
-  group_by(PatternType,Coh) %>%
-  summarize(pcorr.mean=mean(Pct.Corr),
-         pcorr.se=sd(Pct.Corr)/sqrt(length(Pct.Corr)),
-         RT.mean.mean=mean(RT.mean),
-         RT.mean.se=sd(RT.mean)/sqrt(length(RT.mean)))
-         
-pd <- position_dodge(0.01) # The errorbars overlapped, so use position_dodge to move them horizontally
-ggplot(df.pattern_coh, aes(x=Coh, y=pcorr.mean, colour=PatternType, group=PatternType)) + 
-    geom_errorbar(aes(ymin=pcorr.mean-pcorr.se, ymax=pcorr.mean+pcorr.se), colour="black", width=.1, position=pd)+
-    geom_line(position=pd) +
-    geom_point(position=pd,size=2) +    #21 is filled circle
-    xlab("Coherence (%)") +
-    ylab("Percentage of Accuracy") +
-    scale_colour_hue(name="Optic Flow Speed",    #Legend label, use darker colors
-                     breaks=c("linear", "radial"),
-                     labels=c("Linear motion", "Radial Motion"),
-                     l=40) +                    # Use darker colors, lightness=40
-    ggtitle("The Effect of Optic Flow Pattern Type and Coherence on Accuracy") +
-   # expand_limits(y=0) +                        # Expand y range
-   # scale_y_continuous(breaks=0:20*4) +         # Set tick every 4
-    theme_bw() +
-    theme.custom +
-    theme(legend.justification=c(1,0),legend.position=c(1,0))               # Position legend in bottom right
-
-ggplot(df.pattern_coh, aes(x=Coh, y=RT.mean.mean, colour=PatternType, group=PatternType)) + 
-    geom_errorbar(aes(ymin=RT.mean.mean-RT.mean.se, ymax=RT.mean.mean+RT.mean.se), colour="black", width=.1, position=pd) +
-    geom_line(position=pd) +
-    geom_point(position=pd, size=2) +    #21 is filled circle
-    xlab("Cohernce (%))") +
-    ylab("RT") +
-    scale_colour_hue(name="Optic Flow Pattern",    #Legend label, use darker colors
-                    breaks=c("linear", "radial"),
-                     labels=c("Linear motion", "Radial Motion"),
-                     l=40) +                    # Use darker colors, lightness=40
-    ggtitle("The Effect of Optic Flow pattern type and Coherence on Reaction times") +
-   # expand_limits(y=0) +                        # Expand y range
-   # scale_y_continuous(breaks=0:20*4) +         # Set tick every 4
-    theme_bw() +
-    theme.custom +
-   theme(legend.justification=c(1,0),legend.position=c(1,0)) 
-```
-### plot of mean and sd of Age and Coh
-```{r p-corr-age-coh}
-df.age_coh <- df3 %>%
-  group_by(Age,Coh) %>%
-  summarize(pcorr.mean=mean(Pct.Corr),
-         pcorr.se=sd(Pct.Corr)/sqrt(length(Pct.Corr)),
-         RT.mean.mean=mean(RT.mean),
-         RT.mean.se=sd(RT.mean)/sqrt(length(RT.mean)))
-         
-pd <- position_dodge(0.01) # The errorbars overlapped, so use position_dodge to move them horizontally
-ggplot(df.age_coh, aes(x=Coh, y=pcorr.mean, colour=Age, group=Age)) + 
-    geom_errorbar(aes(ymin=pcorr.mean-pcorr.se, ymax=pcorr.mean+pcorr.se), colour="black", width=.1, position=pd)+
-    geom_line(position=pd) +
-    geom_point(position=pd,size=2) +    #21 is filled circle
-    xlab("Coherence (%)") +
-    ylab("Percentage of Accuracy") +
-    scale_colour_hue(name="Age",    #Legend label, use darker colors
-                     breaks=c("5", "6", "7", "8"),
-                     labels=c("5 year old", "6 year old","7 year old","8 year old"),
-                     l=40) +                    # Use darker colors, lightness=40
-    ggtitle("The Effect of Age and Optic Flow Coherence on Accuracy") +
-   # expand_limits(y=0) +                        # Expand y range
-   # scale_y_continuous(breaks=0:20*4) +         # Set tick every 4
-    theme_bw() +
-    theme.custom +
-    theme(legend.justification=c(1,0),legend.position=c(1,0))               # Position legend in bottom right
-
-ggplot(df.age_coh, aes(x=Coh, y=RT.mean.mean, colour=Age, group=Age)) + 
-    geom_errorbar(aes(ymin=RT.mean.mean-RT.mean.se, ymax=RT.mean.mean+RT.mean.se), colour="black", width=.1, position=pd) +
-    geom_line(position=pd) +
-    geom_point(position=pd, size=2) +    #21 is filled circle
-    xlab("Cohernce (%))") +
-    ylab("RT") +
-    scale_colour_hue(name="Age",    #Legend label, use darker colors
-                     breaks=c("5", "6", "7", "8"),
-                     labels=c("5 year old", "6 year old","7 year old","8 year old"),
-                     l=40) +                    # Use darker colors, lightness=40
-    ggtitle("The Effect of Age and Optic Flow Coherence on Reaction times") +
-   # expand_limits(y=0) +                        # Expand y range
-   # scale_y_continuous(breaks=0:20*4) +         # Set tick every 4
-    theme_bw() +
-    theme.custom +
-   theme(legend.justification=c(1,0),legend.position=c(1,0)) 
-```
-
-### plot of mean and sd of Age and Coh
-```{r p-corr-age-patterntype}
-df.age_pattern <- df3 %>%
-  group_by(Age,PatternType) %>%
-  summarize(pcorr.mean=mean(Pct.Corr),
-         pcorr.se=sd(Pct.Corr)/sqrt(length(Pct.Corr)),
-         RT.mean.mean=mean(RT.mean),
-         RT.mean.se=sd(RT.mean)/sqrt(length(RT.mean)))
-         
-pd <- position_dodge(0.01) # The errorbars overlapped, so use position_dodge to move them horizontally
-ggplot(df.age_pattern, aes(x=Age, y=pcorr.mean, colour=PatternType, group=PatternType)) + 
-    geom_errorbar(aes(ymin=pcorr.mean-pcorr.se, ymax=pcorr.mean+pcorr.se), colour="black", width=.1, position=pd)+
-    geom_line(position=pd) +
-    geom_point(position=pd,size=2) +    #21 is filled circle
-    xlab("Age (yrs)") +
-    ylab("Percentage of Accuracy") +
-    scale_colour_hue(name="Age",    #Legend label, use darker colors
-                     breaks=c("linear", "radial"),
-                     labels=c("Linear motion", "Radial Motion"),
-                     l=40) +                    # Use darker colors, lightness=40
-    ggtitle("The Effect of Age and Optic Flow Pattern Type on Accuracy") +
-   # expand_limits(y=0) +                        # Expand y range
-   # scale_y_continuous(breaks=0:20*4) +         # Set tick every 4
-    theme_bw() +
-    theme.custom +
-    theme(legend.justification=c(1,0),legend.position=c(1,0))               # Position legend in bottom right
-
-ggplot(df.age_pattern, aes(x=Age, y=RT.mean.mean, colour=PatternType, group=PatternType)) + 
-    geom_errorbar(aes(ymin=RT.mean.mean-RT.mean.se, ymax=RT.mean.mean+RT.mean.se), colour="black", width=.1, position=pd) +
-    geom_line(position=pd) +
-    geom_point(position=pd, size=2) +    #21 is filled circle
-    xlab("Age (yrs)") +
-    ylab("RT") +
-    scale_colour_hue(name="Optic Flow Pattern",    #Legend label, use darker colors
-                     breaks=c("linear", "radial"),
-                     labels=c("Linear motion", "Radial Motion"),
-                     l=40) +                    # Use darker colors, lightness=40
-    ggtitle("The Effect of Age and Optic Flow Pattern Type on Reaction times") +
-   # expand_limits(y=0) +                        # Expand y range
-   # scale_y_continuous(breaks=0:20*4) +         # Set tick every 4
-    theme_bw() +
-    theme.custom +
-   theme(legend.justification=c(1,0),legend.position=c(1,0)) 
-```
-
-### plot of mean and sd of Age and Speed
-```{r p-corr-age-speed}
-df.age_speed <- df3 %>%
-  group_by(Age,Speed) %>%
-  summarize(pcorr.mean=mean(Pct.Corr),
-         pcorr.se=sd(Pct.Corr)/sqrt(length(Pct.Corr)),
-         RT.mean.mean=mean(RT.mean),
-         RT.mean.se=sd(RT.mean)/sqrt(length(RT.mean)))
-         
-pd <- position_dodge(0.01) # The errorbars overlapped, so use position_dodge to move them horizontally
-ggplot(df.age_speed, aes(x=Age, y=pcorr.mean, colour=Speed, group=Speed)) + 
-    geom_errorbar(aes(ymin=pcorr.mean-pcorr.se, ymax=pcorr.mean+pcorr.se), colour="black", width=.1, position=pd)+
-    geom_line(position=pd) +
-    geom_point(position=pd,size=2) +    #21 is filled circle
-    xlab("Age (yrs)") +
-    ylab("Percentage of Accuracy") +
-    scale_colour_hue(name="Age",    #Legend label, use darker colors
-                     breaks=c("2deg/s", "8deg/s"),
-                     labels=c("2 deg/s", "8 deg/s"),
-                     l=40) +                    # Use darker colors, lightness=40
-    ggtitle("The Effect of Age and Optic Flow Speed on Accuracy") +
-   # expand_limits(y=0) +                        # Expand y range
-   # scale_y_continuous(breaks=0:20*4) +         # Set tick every 4
-    theme_bw() +
-    theme.custom +
-    theme(legend.justification=c(1,0),legend.position=c(1,0))               # Position legend in bottom right
-
-ggplot(df.age_speed, aes(x=Age, y=RT.mean.mean, colour=Speed, group=Speed)) + 
-    geom_errorbar(aes(ymin=RT.mean.mean-RT.mean.se, ymax=RT.mean.mean+RT.mean.se), colour="black", width=.1, position=pd) +
-    geom_line(position=pd) +
-    geom_point(position=pd, size=2) +    #21 is filled circle
-    xlab("Age (yrs)") +
-    ylab("RT") +
-    scale_colour_hue(name="Optic Flow Speed",    #Legend label, use darker colors
-                      breaks=c("2deg/s", "8deg/s"),
-                     labels=c("2 deg/s", "8 deg/s"),
-                     l=40) +                    # Use darker colors, lightness=40
-    ggtitle("The Effect of Age and Optic Flow Speed on Reaction times") +
-   # expand_limits(y=0) +                        # Expand y range
-   # scale_y_continuous(breaks=0:20*4) +         # Set tick every 4
-    theme_bw() +
-    theme.custom +
-   theme(legend.justification=c(1,0),legend.position=c(1,0)) 
+```{r plot-acc-gen-pattern}
+df_p2_a_acc_gen_pat <- df_adult %>% 
+  group_by(SubID, PatternType, Gender) %>% 
+  summarize(N.corr = sum(Acc), 
+            N.tot = n(), 
+            Pct.Corr = N.corr/N.tot)  %>% 
+  group_by(Gender, PatternType) %>%
+  summarize(n=length(Pct.Corr),
+            Pct.Corr.mean = 100*mean(Pct.Corr, na.rm=TRUE),
+            Pct.Corr.sem = 100*sd(Pct.Corr, na.rm=TRUE)/sqrt(length(Pct.Corr)))  #computation of the standard error of the mean, ci is 1.96*sem
+p2_a_acc_pat_gen <- 
+  ggplot(data=df_p2_a_acc_gen_pat, aes(x=factor(PatternType), y=Pct.Corr.mean, fill = factor(Gender)) ) +
+  geom_bar(stat="identity", position = position_dodge(), width = 0.5) +
+  geom_errorbar(aes(ymin = Pct.Corr.mean - Pct.Corr.sem, ymax = Pct.Corr.mean + Pct.Corr.sem), width=.1,position=position_dodge(.5)) +
+  ggtitle("Pattern X Gender Interaction in Adults") +
+  ylab("Percentage of Accuracy (%)") +
+  xlab("Optic flow Pattern Type") +
+  coord_cartesian(ylim=c(45,100)) +
+  theme_bw() +
+  theme.custom + # Position legend in bottom right
+  scale_colour_brewer(palette = "Set1")  +
+  theme(legend.position=c(0.1,0.9)) +
+  theme(plot.title = element_text(hjust = 0.5)) 
+p2_a_acc_pat_gen
 ```
 
 ### Plot of actual  *p*(corr) and predicted *p*(corr) by condition
@@ -1781,7 +1603,56 @@ pic.rt<-ggplot(data=df.bygroup.bycond, aes(x=Coh, y=RT.mean.mean, color=group)) 
 pic.rt
 ```
 
-
+```{r plot-acc-speed-group}
+df_p2_all_acc_speed_group <- df_all %>% 
+  group_by(SubID, Speed, group) %>% 
+  summarize(N.corr = sum(Acc), 
+            N.tot = n(), 
+            Pct.Corr = N.corr/N.tot)  %>% 
+  group_by(Speed, group) %>%
+  summarize(n=length(Pct.Corr),
+            Pct.Corr.mean = 100*mean(Pct.Corr, na.rm=TRUE),
+            Pct.Corr.sem = 100*sd(Pct.Corr, na.rm=TRUE)/sqrt(length(Pct.Corr)))  #computation of the standard error of the mean, ci is 1.96*sem
+p2_all_acc_speed_group <- 
+  ggplot(data=df_p2_all_acc_speed_group, aes(x=factor(Speed), y=Pct.Corr.mean, fill = factor(group)) ) +
+  geom_bar(stat="identity", position = position_dodge(), width = 0.5) +
+  geom_errorbar(aes(ymin = Pct.Corr.mean - Pct.Corr.sem, ymax = Pct.Corr.mean + Pct.Corr.sem), width=.1,position=position_dodge(.5)) +
+  ggtitle("Speed X Group Interaction") +
+  ylab("Percentage of Accuracy (%)") +
+  xlab("Optic flow Speed") +
+  coord_cartesian(ylim=c(70,100)) +
+  theme_bw() +
+  theme.custom + # Position legend in bottom right
+  scale_colour_brewer(palette = "Set1")  +
+  theme(legend.position=c(0.1,0.9)) +
+  theme(plot.title = element_text(hjust = 0.5)) 
+p2_all_acc_speed_group 
+```
+```{r plot-acc-pat-group}
+df_p2_all_acc_pat_group <- df_all %>% 
+  group_by(SubID, PatternType, group) %>% 
+  summarize(N.corr = sum(Acc), 
+            N.tot = n(), 
+            Pct.Corr = N.corr/N.tot)  %>% 
+  group_by(PatternType, group) %>%
+  summarize(n=length(Pct.Corr),
+            Pct.Corr.mean = 100*mean(Pct.Corr, na.rm=TRUE),
+            Pct.Corr.sem = 100*sd(Pct.Corr, na.rm=TRUE)/sqrt(length(Pct.Corr)))  #computation of the standard error of the mean, ci is 1.96*sem
+p2_all_acc_pat_group <- 
+  ggplot(data=df_p2_all_acc_pat_group, aes(x=factor(PatternType), y=Pct.Corr.mean, fill = factor(group)) ) +
+  geom_bar(stat="identity", position = position_dodge(), width = 0.5) +
+  geom_errorbar(aes(ymin = Pct.Corr.mean - Pct.Corr.sem, ymax = Pct.Corr.mean + Pct.Corr.sem), width=.1,position=position_dodge(.5)) +
+  ggtitle("Pattern X Group Interaction") +
+  ylab("Percentage of Accuracy (%)") +
+  xlab("Optic flow Pattern Type") +
+  coord_cartesian(ylim=c(70,100)) +
+  theme_bw() +
+  theme.custom + # Position legend in bottom right
+  scale_colour_brewer(palette = "Set1")  +
+  theme(legend.position=c(0.1,0.9)) +
+  theme(plot.title = element_text(hjust = 0.5)) 
+p2_all_acc_pat_group
+```
 
 
 
