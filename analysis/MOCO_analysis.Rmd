@@ -846,17 +846,29 @@ df_p3_c_acc_speed_age <- df_child %>%
   summarize(N.corr = sum(Acc), 
             N.tot = n(), 
             Pct.Corr.mean = N.corr/N.tot)  
+p4_c_acc_speed_age <- ggplot(data =  df_p3_c_acc_speed_age, 
+       aes(y = Pct.Corr.mean, x = Age, color = Speed, group = Speed) ) + 
+    geom_point() +
+    geom_smooth() +
+    ggtitle("Speed X Age Interaction in Children") +
+    ylab("Percentage of Accuracy (%)") +
+    xlab("Age") +
+ #   coord_cartesian(ylim=c(65,100)) +
+    theme_bw() +
+    theme.custom + # Position legend in bottom right
+    scale_colour_brewer(palette = "Set1")  +
+    theme(legend.position=c(0.1,0.9)) +
+    theme(plot.title = element_text(hjust = 0.5)) 
+ # geom_line(df_p4_c_acc_speed_age, aes(x=Coh, y = Pred*100), color= "red") + 
+ #  geom_line(data=pred[21:40,], aes(x=Coh,Pred*100), color = "blue") 
+p4_c_acc_speed_age
+
 df_p4_c_acc_speed_age <-df_p3_c_acc_speed_age  %>% 
   group_by(Speed, Age) %>%
   summarize(n=length(Pct.Corr),
             Pct.Corr.mean = 100*mean(Pct.Corr, na.rm=TRUE),
             Pct.Corr.ci = 1.96*100*sd(Pct.Corr, na.rm=TRUE)/sqrt(length(Pct.Corr)))  #computation of the standard error of the mean, ci is 1.96*sem
-p <- ggplot(data =  df_p3_c_acc_speed_age, 
-       aes(y = Pct.Corr.mean, x = Age, color = Speed, group = Speed) ) + 
-    geom_point() +
-  geom_line(df_p4_c_acc_speed_age, aes(x=Coh, y = Pred*100), color= "red") + 
-  geom_line(data=pred[21:40,], aes(x=Coh,Pred*100), color = "blue") 
-p
+
 p2_c_acc_speed_coh <- 
   ggplot(data=df_p2_c_acc_speed_coh, aes(x=Coh, y=Pct.Corr.mean, fill = factor(Speed)) , width = 0.1) +
   geom_bar(stat="identity", position = position_dodge()) +
@@ -1753,16 +1765,101 @@ pairs(em3)
 
 ```{r anova-plot}
 # Plotting results of aov_ez
-emmip(a, Group~ PatternType|Speed, CIs = TRUE)
-emmip(a, group~Speed, CIs = TRUE)
+# emmip(a, Group~ PatternType|Speed, CIs = TRUE)
+emmip(a, group~Speed, CIs = TRUE, 
+                 legend = TRUE,
+              #   trace.label = deparse(substitute(trace.factor)),
+                 xlab = "Speed",
+                 ylab = "Decision bias")
+# the other way to plot barplot
+df_all_sdt_speed_group<-as.data.frame(summary(em3))
+names(df_all_sdt_speed_group)[1] <- "Group"
+df_all_sdt_speed_group$Group <- plyr::revalue(df_all_sdt_speed_group$Group, c("child"="Child", "adult"="Adult"))
+df_all_sdt_speed_group$Speed <- plyr::revalue(df_all_sdt_speed_group$Speed, c("X2.deg.s"="Low-speed", "X8.deg.s"="High-speed"))
+p1_all_sdt_speed_group <- 
+  ggplot(data=df_all_sdt_speed_group, aes(x=factor(Speed), y=emmean, fill = factor(Group)) ) +
+  geom_bar(stat="identity", position = position_dodge(), width = 0.5) +
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width=.1, position=position_dodge(.5)) +
+  ggtitle("Speed X Group Interaction on Decision Criterion") +
+  ylab("Decision Criterion") +
+  xlab("Optic flow Speed") +
+  coord_cartesian(ylim=c(0,0.2)) +
+  theme_bw() +
+  theme.custom + # Position legend in bottom right
+  scale_colour_brewer(palette = "Set1")  +
+  theme(legend.position=c(0.1,0.9)) +
+  theme(plot.title = element_text(hjust = 0.5)) 
+p1_all_sdt_speed_group
+
+
 emmip(a, Gender~PatternType, CIs = TRUE)
+em4<-emmeans(a, ~Gender*PatternType)
+df_all_sdt_gender_patterntype<-as.data.frame(summary(em4))
+df_all_sdt_gender_patterntype$PatternType <- plyr::revalue(df_all_sdt_gender_patterntype$PatternType, c("linear"="Linear", "radial"="Radial"))
+p2_all_sdt_gender_patterntype <- 
+  ggplot(data=df_all_sdt_gender_patterntype, aes(x=factor(PatternType), y=emmean, fill = factor(Gender)) ) +
+  geom_bar(stat="identity", position = position_dodge(), width = 0.5) +
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width=.1, position=position_dodge(.5)) +
+  ggtitle("Pattern X Gender Interaction on Decision Criterion") +
+  ylab("Decision Criterion") +
+  xlab("Optic flow Pattern") +
+  coord_cartesian(ylim=c(0,0.2)) +
+  theme_bw() +
+  theme.custom + # Position legend in bottom right
+  scale_colour_brewer(palette = "Set1")  +
+  theme(legend.position=c(0.1,0.9)) +
+  theme(plot.title = element_text(hjust = 0.5)) 
+p2_all_sdt_gender_patterntype 
 ```
+```{r plot-age-dprime}
+library(dplyr)
+df_child3 <- df_child %>%
+   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Response, Age) %>%
+   dplyr::filter(Coh==0.15) %>%
+   dplyr::filter(Response %in% c("L","R"))
+# df_child3$SubID<-factor(df_child3$SubID)
+
+df_adult3 <- df_adult %>%
+   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Response, Age) %>%
+   dplyr::filter(Coh==0.15)  %>%
+   dplyr::filter(Response %in% c("L","R"))
+# df_adult3$SubID<-factor(df_adult3$SubID)
+
+df3<-rbind(df_child3, df_adult3) 
+df.new2<- df3 %>%
+  mutate(Group=c(rep('Child',nrow(df_child3)),rep('Adult',nrow(df_adult3)))) %>%
+  filter(Response != "NA") %>%
+  group_by(SubID, Speed, Age) %>%
+  summarise(n_hit = sum(Response=="L" & Acc=="TRUE"),
+            n_fa  = sum(Response=="L" & Acc=="FALSE"),
+            n_miss = sum(Response=="R" & Acc=="FALSE"),
+            n_cr = sum(Response=="R" & Acc=="TRUE") )  
+
+indices2 <- neuropsychology::dprime(df.new2$n_hit, df.new2$n_fa, df.new2$n_miss, df.new2$n_cr)
+df.sdt2 <- cbind(df.new2, indices2)
+
+p3_all_d_sdt_speed_age <- ggplot(data =  df.sdt2, 
+       aes(y = dprime, x = Age, color = Speed, group = Speed) ) + 
+    geom_point() +
+    geom_smooth() +
+    ggtitle("Speed X Age Interaction") +
+    ylab("Sensitivity (d')") +
+    xlab("Age") +
+ #   coord_cartesian(ylim=c(65,100)) +
+    theme_bw() +
+    theme.custom + # Position legend in bottom right
+    scale_colour_brewer(palette = "Set1")  +
+    theme(legend.position=c(0.1,0.9)) +
+    theme(plot.title = element_text(hjust = 0.5)) 
+p3_all_d_sdt_speed_age 
+```
+
 ``` {r anova-SDT_child}
 df.new_c<- df_child %>%
    dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Response, AgeYrs, Group) %>%
-  dplyr::filter(Group == "linear-radial coh [.15 .3 .45 .6]") %>%
+   dplyr::filter(Group == "linear-radial coh [.15 .3 .45 .6]") %>%
    dplyr::filter(Response %in% c("L","R")) 
-df.new_c$Coh<-factor(df.new_c$Coh)
+df.new_c$ Coh<-factor(df.new_c$Coh)
 df.new_c<- df.new_c %>%
   group_by(SubID, Coh, PatternType, Speed, Gender, AgeYrs) %>%
   summarize(n_hit = sum(Response=="L" & Acc=="TRUE"),
@@ -1773,7 +1870,6 @@ df.new_c<- df.new_c %>%
 indices_c <- neuropsychology::dprime(df.new_c$n_hit, df.new_c$n_fa, df.new_c$n_miss, df.new_c$n_cr)
 df.sdt_c <- cbind(df.new_c, indices_c)
 
-df.sdt_c$SubID<-as.integer(df.sdt_c$SubID) 
 a2 <- aov_ez(id="SubID", dv = "dprime", df.sdt_c, between = c("Gender", "AgeYrs"),within=c("Speed","PatternType","Coh") )
 summary(a2)
 knitr::kable(nice(a2))
@@ -1790,10 +1886,15 @@ em1
 pairs(em1)
 em2
 pairs(em2)
+emmip(a2, Speed~AgeYrs|Coh, CIs = TRUE,
+                 legend = TRUE,
+              #   trace.label = deparse(substitute(trace.factor)),
+                 xlab = "Age of Children",
+                 ylab = "Sensitivity (d')")
 ```
 ``` {r anova-plot}
 # Plotting results of aov_ez
-emmip(a, group ~ PatternType|speed, CIs = TRUE)
+emmip(a, group ~ PatternType|Speed, CIs = TRUE)
 ```
 
 ``` {r anova-plot}
