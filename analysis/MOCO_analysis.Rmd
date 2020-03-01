@@ -57,6 +57,19 @@ df_adult <- df_adult %>%
    dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Age, Response)
 df_all <- read.csv(file="~/Documents/github/moco-psychophysics-child-adult/analysis/CombinedData.csv", header=TRUE, sep=",")
 df_all$SubID <- factor(df_all$SubID)
+df_child1 <- df_child %>%
+   dplyr::filter(Group == "linear-radial coh [.15 .3 .45 .6]") %>%
+   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Age,  Response)
+df_child1$Coherence<-ordered(df_child1$Coh, 
+                 levels = c(0.15,0.30,0.45,0.60), 
+                 labels = c("level1", "level2", "level3", "level4"))
+df_adult$Coherence<-ordered(df_adult$Coh, 
+                 levels=c(0.05,0.10,0.15,0.20), 
+                 labels = c("level1", "level2", "level3", "level4"))
+df_all1<-bind_rows(df_child1, df_adult) 
+df_all1<- df_all1 %>%
+  mutate(group=c(rep('Child',nrow(df_child1)),rep('Adult',nrow(df_adult))))
+df_all1$SubID <- factor(df_all1$SubID)
 #### 30 children and 29 adults, each has 320 data. But the first adult has 480 data.
 ```
 
@@ -373,14 +386,14 @@ anova(model.acc.logit,model.acc.full3)
 ```{r get-coefficient-child}
 # get coefficient
 # str(df_child)
-form.acc.logit2<- Acc ~ Coh + Speed + PatternType + Age + Gender + Coh*Speed + +Age*Speed+ (1|SubID) #Age*Coh design related
+form.acc.logit2<- Acc ~ scale(Coh) + Speed + PatternType + Age + Gender + scale(Coh)*Speed  +Age*Speed+ (1|SubID) #Age*Coh design related
 model.acc.logit2 <- glmer(formula = form.acc.logit2, family=binomial(mafc.logit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_child)
 summary(model.acc.logit2)
 anova(model.acc.logit2)
 lmerTest::anova(model.acc.logit2)
 car::Anova(model.acc.logit2, type=3)  # this is betterm because F is said not work in glmer model
-car::Anova(model.acc.logit) # there is slight difference between scaled and unscaled
-afex::mixed(RT ~ Coh + Speed + PatternType + Age + Gender + Coh*Speed +Age*Speed+ (1|SubID), data=df_child, method = "S",  control = lmerControl(optCtrl = list(maxfun = 1e6)))
+car::Anova(model.acc.logit2) # there is slight difference between scaled and unscaled
+# afex::mixed(RT ~ Coh + Speed + PatternType + Age + Gender + Coh*Speed +Age*Speed+ (1|SubID), data=df_child, method = "S",  control = lmerControl(optCtrl = list(maxfun = 1e6)))
 afex::mixed(Acc ~ scale(Coh) + Speed + PatternType + scale(Age) + Gender + scale(Coh)*Speed + (1|SubID),family=binomial, data=df_child, method = "PB")
 knitr::kable(model.acc.logit2)
 ## the same 
@@ -388,7 +401,53 @@ knitr::kable(model.acc.logit2)
 ## Type I Analysis of Variance Table with Satterthwaite's method
 # anova(model.acc.logit2, type=1)
 ```
+```{r test-child}
+# get coefficient
+# str(df_child)
+form.acc.logit3<- Acc ~ scale(Coh) + Speed + PatternType + Age + Gender + scale(Coh)*Speed  +Age*Speed+ (Age|SubID) #Age*Coh design related
+model.acc.logit3 <- glmer(formula = form.acc.logit3, family=binomial(mafc.logit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_child)
+summary(model.acc.logit3)
+car::Anova(model.acc.logit3)
+# boundary (singular) fit: see ?isSingular
+# it is because it is a complex model, there are 30 age value
+anova(model.acc.logit3, model.acc.logit2)
+```
+```{r calculate_r^2_ICC}
+# calculate the marginal R^2 and conditional R^2
+MuMIn::r.squaredGLMM(model.acc.logit2)
 
+# for binomial response data
+#compute the marginal R-square
+#compute the variance in the fitted values
+VarF <- var(as.vector(fixef(model.acc.logit2) %*% t(model.acc.logit2@pp$X)))
+# VarCorr() extracts variance components
+# attr(VarCorr(lmer.model),’sc’)^2 extracts the residual variance, VarCorr()$plot extract the variance of the plot effect
+VarF/(VarF + VarCorr(model.acc.logit2)[[1]][1] + attr(VarCorr(model.acc.logit2), 'sc')^2 + (pi^2)/3)
+
+#compute the conditionnal R-square
+(VarF + VarCorr(model.acc.logit2)[[1]][1])/(VarF + VarCorr(model.acc.logit2)[[1]][1] + (attr(VarCorr(model.acc.logit2), 'sc')^2) + (pi^2)/3)
+# The residual deviance in logistic regression is fixed to (pi ^ 2) / 3
+
+form.empty <- Acc~1+(1|SubID)
+mod0 <- glmer(formula = form.empty, family=binomial(mafc.logit(2)), data = df_child)
+summary(mod0)
+# computing the percent of explained variance for the plot slope
+1 - (VarCorr(model.acc.logit2)[[1]][1]^2/VarCorr(mod0)[[1]][1]^2)
+# for the residuals
+1 - (var(residuals(model.acc.logit2))/var(residuals(mod0)))
+
+## other way
+performance::r2(model.acc.logit2)
+
+# ICC
+# extracting tau^2 for the varying intercept
+tau2 <- brms::VarCorr(model.acc.logit2)[[1]][1]^2
+
+# computing the ICC for the intercept
+ICC1 <- tau2 / (tau2 + (pi^2 / 3) )
+ICC1
+performance::icc(model.acc.logit2)
+```
 ```{r get-df}
 # get df. One way afex does not work for glmer, try lmer to get df, which should be the same as the glmer
 model.acc.logit_lmer <- lmer(formula = form.acc.logit2,  data = df_child)
@@ -402,7 +461,7 @@ se <- sqrt(diag(vcov(model.acc.logit2)))
 # table of estimates with 95% CI
 tab <- cbind(OR = fixef(model.acc.logit2), LL = fixef(model.acc.logit2) - 1.96 * se, UL = fixef(model.acc.logit2) + 1.96 * se)
 # however, this result is different from the below
-print(exp(tab), digits=5)
+print(exp(tab))
 
 # way 2
 cc <- confint(model.acc.logit2)  ## slow (~ 11 seconds)
@@ -456,6 +515,10 @@ emm2 = emmeans(fit1, specs = pairwise ~ f1|f2, type = "response")
 emm2
 
 # way 1
+lsmeans::lsmeans(model.acc.logit2, pairwise~Coh*Speed, adjust="tukey")
+lsmeans::lsmeans(model.acc.logit2, pairwise~Age*Speed, adjust="tukey")
+
+# way 2
 library(multcomp)
 summary(glht(model.acc.logit2, mcp(Gender="Tukey")))
 summary(glht(model.acc.logit2, mcp(Coh="Tukey")))
@@ -839,6 +902,58 @@ p2_c_acc_speed_coh <-
   theme(plot.title = element_text(hjust = 0.5)) 
 p2_c_acc_speed_coh
 ```
+```{r plot-acc-coh-pattern}
+df_p2_c_acc_pattern_coh <- df_child %>% 
+  filter(Group=="linear-radial coh [.15 .3 .45 .6]") %>%
+  group_by(SubID, PatternType, Coh) %>% 
+  summarize(N.corr = sum(Acc), 
+            N.tot = n(), 
+            Pct.Corr = N.corr/N.tot)  %>% 
+  group_by(PatternType, Coh) %>%
+  summarize(n=length(Pct.Corr),
+            Pct.Corr.mean = 100*mean(Pct.Corr, na.rm=TRUE),
+            Pct.Corr.ci = 1.96*100*sd(Pct.Corr, na.rm=TRUE)/sqrt(length(Pct.Corr)))  #computation of the standard error of the mean, ci is 1.96*sem
+p2_c_acc_pat_coh <- 
+  ggplot(data=df_p2_c_acc_pattern_coh, aes(x=Coh, y=Pct.Corr.mean, fill = factor(PatternType)) , width = 0.1) +
+  geom_bar(stat="identity", position = position_dodge()) +
+  geom_errorbar(aes(ymin = Pct.Corr.mean - Pct.Corr.ci, ymax = Pct.Corr.mean + Pct.Corr.ci), width=.02,position=position_dodge(.14)) +
+  ggtitle("Pattern X Coherence Interaction in Children") +
+  ylab("Percentage of Accuracy (%)") +
+  xlab("Coherence levels") +
+  coord_cartesian(ylim=c(62,100)) +
+  theme_bw() +
+  theme.custom + # Position legend in bottom right
+  scale_colour_brewer(palette = "Set1")  +
+  theme(legend.position=c(0.1,0.9)) +
+  theme(plot.title = element_text(hjust = 0.5)) 
+p2_c_acc_pat_coh
+```
+```{r plot-acc-gen-pat}
+df_p2_c_acc_gen_pat <- df_child %>% 
+  filter(Group=="linear-radial coh [.15 .3 .45 .6]") %>%
+  group_by(SubID, Gender, PatternType) %>% 
+  summarize(N.corr = sum(Acc), 
+            N.tot = n(), 
+            Pct.Corr = N.corr/N.tot)  %>% 
+  group_by(PatternType, Gender) %>%
+  summarize(n=length(Pct.Corr),
+            Pct.Corr.mean = 100*mean(Pct.Corr, na.rm=TRUE),
+            Pct.Corr.ci = 1.96*100*sd(Pct.Corr, na.rm=TRUE)/sqrt(length(Pct.Corr)))  #computation of the standard error of the mean, ci is 1.96*sem
+p2_c_acc_gen_pat <- 
+  ggplot(data=df_p2_c_acc_gen_pat, aes(x=Gender, y=Pct.Corr.mean, fill = factor(PatternType)) , width = 0.1) +
+  geom_bar(stat="identity", position = position_dodge()) +
+  geom_errorbar(aes(ymin = Pct.Corr.mean - Pct.Corr.ci, ymax = Pct.Corr.mean + Pct.Corr.ci), width=.1,position=position_dodge(.9)) +
+  ggtitle("The Accuracy in Children by Gender and Pattern") +
+  ylab("Percentage of Accuracy (%)") +
+  xlab("Gender") +
+  coord_cartesian(ylim=c(65,100)) +
+  theme_bw() +
+  theme.custom + # Position legend in bottom right
+  scale_colour_brewer(palette = "Set1")  +
+  theme(legend.position=c(0.1,0.9)) +
+  theme(plot.title = element_text(hjust = 0.5)) 
+p2_c_acc_gen_pat
+```
 ```{r plot-acc-age-speed}
 df_p3_c_acc_speed_age <- df_child %>% 
   # filter(Group=="linear-radial coh [.15 .3 .45 .6]") %>%
@@ -1082,12 +1197,12 @@ summary(model_a.acc.full1)
 ```
 
 ```{r acc-probit-interaction-gender-age, eval=FALSE}
-form_a.full3<- Acc ~ scale(Coh) + Speed + PatternType + Gender + scale(Coh)*Speed + scale(Coh)*PatternType + Gender*scale(Coh) + Gender*Speed + Gender*PatternType+ (1|SubID)
+form_a.full3<- Acc ~ scale(Coh) + Speed + PatternType + Gender + scale(Coh)*PatternType + Gender*scale(Coh) + Gender*Speed + Gender*PatternType+ (1|SubID)
 model_a.acc.full3 <- glmer(formula = form_a.full3, family=binomial(mafc.probit(2)),glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)),  data = df_adult) # AIC 9359.9
 summary(model_a.acc.full3)
 ```
 ```{r acc-probit-interaction-gender-coh, eval=FALSE}
-form_a.probit<- Acc ~ scale(Coh) + PatternType + Speed + PatternType*scale(Coh) + Gender*Speed + Gender*PatternType+ (1|SubID)
+form_a.probit<- Acc ~ scale(Coh) + PatternType + Speed + PatternType*scale(Coh) + Speed*scale(Coh)+Gender*Speed + Gender*PatternType+ (1|SubID)
 model_a.acc.probit <- glmer(formula = form_a.probit, family=binomial(mafc.probit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)),  data = df_adult)
 summary(model_a.acc.probit)
 anova(model_a.acc.full3,model_a.acc.probit)  # 9356.9, better fit
@@ -1108,6 +1223,13 @@ model_a.acc.logit <- glmer(formula = form_a.probit, family=binomial(mafc.logit(2
 summary(model_a.acc.logit) # better fit than probit
 car::Anova(model_a.acc.logit)
 anova(model_a.acc.logit,model_a.acc.probit)
+anova(model_a.acc.logit,model_a.acc.logit1)
+
+form_a.probit1<- Acc ~ scale(Coh) + PatternType + Speed + Age+ PatternType*scale(Coh) + Gender*Speed + Gender*PatternType+ (1|SubID)
+model_a.acc.logit1 <- glmer(formula = form_a.probit1, family=binomial(mafc.logit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_adult)
+summary(model_a.acc.logit1)
+car::Anova(model_a.acc.logit1, type =3)
+anova(model_a.acc.logit1)
 # ss <- getME(model.cloglog.interaction,c("theta","fixef"))
 # m2 <- update(model.cloglog.interaction,start=ss,control=glmerControl(optCtrl=list(maxfun=2e4)))
 ```
@@ -1120,7 +1242,33 @@ MuMIn::r.squaredLR(model.acc.logit2,null.RE = TRUE)
 effsize::cohen.d(df2$Acc ~ Gender+ Coh + Speed + PatternType + Coh*Speed + +Age*Speed + Age*PatternType + (1|SubID))
 aod::wald.test(b = coef(model.acc.logit), Sigma = vcov(model.logit.interaction), Terms = 4:6)
 pbkrtest::KRmodcomp(model_a.acc.logit2)
+```{r calculate_r^2_ICC}
+# calculate the marginal R^2 and conditional R^2
+MuMIn::r.squaredGLMM(model_a.acc.logit)
 
+# for binomial response data
+#compute the marginal R-square
+#compute the variance in the fitted values
+VarF <- var(as.vector(fixef(model_a.acc.logit) %*% t(model_a.acc.logit@pp$X)))
+# VarCorr() extracts variance components
+# attr(VarCorr(lmer.model),’sc’)^2 extracts the residual variance, VarCorr()$plot extract the variance of the plot effect
+VarF/(VarF + VarCorr(model_a.acc.logit)[[1]][1] + attr(VarCorr(model_a.acc.logit), 'sc')^2 + (pi^2)/3)
+
+#compute the conditionnal R-square
+(VarF + VarCorr(model_a.acc.logit)[[1]][1])/(VarF + VarCorr(model_a.acc.logit)[[1]][1] + (attr(VarCorr(model_a.acc.logit), 'sc')^2) + (pi^2)/3)
+# The residual deviance in logistic regression is fixed to (pi ^ 2) / 3
+
+# ICC
+# extracting tau^2 for the varying intercept
+tau2 <- brms::VarCorr(model_a.acc.logit)[[1]][1]^2
+
+# computing the ICC for the intercept
+ICC1 <- tau2 / (tau2 + (pi^2 / 3) )
+ICC1
+# other
+performance::icc(model_a.acc.logit)
+# actually ICC is not valid for logistic regression
+```
 
 ```{r get-df}
 # get df. One way afex does not work for glmer, try lmer to get df, which should be the same as the glmer
@@ -1128,14 +1276,21 @@ model_a.acc.logit_lmer <- lmer(formula = model_a.acc.logit,  data = df_adult)
 summary(model_a.acc.logit_lmer)
 anova(model_a.acc.logit_lmer)
 ```
-
+```{r post-hoc}
+lsmeans::lsmeans(model_a.acc.logit1, pairwise~Gender*Speed, adjust="tukey")
+lsmeans::lsmeans(model_a.acc.logit1, pairwise~Gender*PatternType, adjust="tukey")
+lsmeans::lsmeans(model_a.acc.logit1, pairwise~Coh*PatternType, adjust="tukey")
+library(emmeans)
+emmeans(model_a.acc.logit1, specs = pairwise ~ Gender:Speed, type = "response", adjust = "none")
+emmeans(model_a.acc.logit1, specs = pairwise ~ Gender:PatternType, type = "response", adjust = "none")
+```
 ```{r get-95%CI&OR-child}
 # Way 1
-se <- sqrt(diag(vcov(model_a.acc.logit)))
+se_a <- sqrt(diag(vcov(model_a.acc.logit1)))
 # table of estimates with 95% CI
-tab <- cbind(OR = fixef(model.acc.logit), LL = fixef(model.acc.logit2) - 1.96 * se, UL = fixef(model.acc.logit) + 1.96 * se)
+tab_a <- cbind(OR = fixef(model_a.acc.logit1), LL = fixef(model_a.acc.logit1) - 1.96 * se_a, UL = fixef(model_a.acc.logit1) + 1.96 * se_a)
 # however, this result is different from the below
-print(exp(tab), digits=3)
+print(exp(tab_a), digits=3)
 
 # way 2
 cc_a <- confint(model_a.acc.logit)  ## slow (~ 11 seconds)
@@ -1202,7 +1357,7 @@ summary(glht(model.acc.logit2, mcp(Gender="Tukey")))
 summary(glht(model.acc.logit2, mcp(Coh="Tukey")))
 ```
 ```{r acc-cloglog-interaction, eval=FALSE}
-model_a.acc.cloglog <- glmer(formula = form_a.probit, family=binomial(mafc.cloglog(2)), data = df_adult)
+model_a.acc.cloglog <- glmer(formula = form_a.probit1, family=binomial(mafc.cloglog(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun =200000)), data = df_adult)
 summary(model_a.acc.cloglog)
 anova(model_a.acc.logit,model_a.acc.cloglog)
 # ss <- getME(model.cloglog.interaction,c("theta","fixef"))
@@ -1212,7 +1367,7 @@ anova(model_a.acc.logit,model_a.acc.cloglog)
 AIC 5768
 
 ```{r acc-weibull-interaction, eval=FALSE}
-model_a.acc.weibull <- glmer(formula = form_a.probit, family=binomial(mafc.weib(2)), data = df_adult)
+model_a.acc.weibull <- glmer(formula = form_a.probit1, family=binomial(mafc.weib(2)), data = df_adult)
 summary(model_a.acc.weibull)
 anova(model_a.acc.logit,model_a.acc.weibull)
 ```
@@ -1402,6 +1557,14 @@ model.log.rt1_a <- lmer(formula = form.log.rt1_a, data = df_adult, REML=FALSE)
 summary(model.log.rt1_a) #AIC 8794
 car::Anova(model.log.rt1_a,type=3) # in package car
 ```
+```{r r2_ICC}
+# ICC
+tau2 <- brms::VarCorr(model.log.rt1_a)[[1]][1]^2
+
+# computing the ICC for the intercept
+ICC1 <- tau2 / (tau2 + (pi^2 / 3) )
+ICC1
+```
 ```{r get-df}
 # get df. One way afex does not work for glmer, try lmer to get df, which should be the same as the glmer
 car::Anova(model.log.rt1_a,type=3)
@@ -1409,7 +1572,7 @@ car::Anova(model.log.rt1_a,ddf="Kenward-Roger")
 anova(model.log.rt1_a)
 afex::mixed(log(RT) ~  Acc+ Coh+ Speed+Coh*Speed+Coh*PatternType+ Gender*Coh+ Gender*PatternType+ (1|SubID) , data=df_adult, method = "S",  control = lmerControl(optCtrl = list(maxfun = 1e6)))
 ```
-```{r get-95%CI&OR-child}
+```{r get-95%CI&OR-adult}
 se <- sqrt(diag(vcov(model.log.rt1_a)))
 # table of estimates with 95% CI
 tab <- cbind(OR = fixef(model.log.rt1_a), LL = fixef(model.log.rt1_a) - 1.96 * se, UL = fixef(model.log.rt1_a) + 1.96 * se)
@@ -1433,12 +1596,17 @@ print(exp(tab), digits=3)
 #group comparison
 # Accuracy group comparison
 ```{r acc-logit-initial, eval=FALSE}
-df_all$Speed <- factor(df_all$Speed, labels = c("2 deg/s", "8 deg/s"))
+df_all$Speed <- factor(df_all$Speed, labels = c("Low speed", "High Speed"))
 df_all$SubID <- factor(df_all$SubID)
 df_all$group <- factor(df_all$group)
-form.acc.logit<- Acc ~ Gender + Coh + Speed + PatternType + group + group*Coh+group*Speed+ (1|SubID) 
-model.acc.logit <- glmer(formula = form.acc.logit, family=binomial(mafc.logit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_all)
+form.acc.logit<- Acc ~ Gender + Coh + Speed + PatternType + group + Age+ group*Coh*Speed*PatternType*Gender+(1|SubID) 
+model.acc.logit <- glmer(formula = form.acc.logit, family=binomial(mafc.logit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_all1)
 summary(model.acc.logit)
+form.acc.logit1<- Acc ~ Gender + Coherence + Speed + PatternType + group + Age+ group*Coherence*Speed*PatternType+(1|SubID)
+model.acc.logit1 <- glmer(formula = form.acc.logit1, family=binomial(mafc.logit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_all1)
+summary(model.acc.logit1)
+form.acc.logit<- Acc ~ Gender + Coh + Speed + PatternType + group + Age+ group*Coh+Coh*Speed+group*PatternType+Coh*Pattern+Speed*PatternType+Gender*Coh+(1|SubID) 
+
 car::Anova(model.acc.logit,type=3)
 se <- sqrt(diag(vcov(model.acc.logit)))
 # table of estimates with 95% CI
@@ -1747,6 +1915,7 @@ knitr::kable(nice(a))
 # What about the estimated marginal means of the design?
 library(emmeans)
 emmeans(a, ~Gender* group * Speed*PatternType)
+knitr::kable(nice(a))
 # What about the ‘main effects?
 em1<-emmeans(a, ~Gender)
 em2<-emmeans(a, ~group)
@@ -1811,6 +1980,7 @@ p2_all_sdt_gender_patterntype <-
   theme(plot.title = element_text(hjust = 0.5)) 
 p2_all_sdt_gender_patterntype 
 ```
+
 ```{r plot-age-dprime}
 library(dplyr)
 df_child3 <- df_child %>%
@@ -1891,6 +2061,8 @@ emmip(a2, Speed~AgeYrs|Coh, CIs = TRUE,
               #   trace.label = deparse(substitute(trace.factor)),
                  xlab = "Age of Children",
                  ylab = "Sensitivity (d')")
+a3 <- aov_ez(id="SubID", dv = "c", df.sdt_c, between = c("Gender", "AgeYrs"),within=c("Speed","PatternType","Coh") )
+summary(a3)
 ```
 ``` {r anova-plot}
 # Plotting results of aov_ez
