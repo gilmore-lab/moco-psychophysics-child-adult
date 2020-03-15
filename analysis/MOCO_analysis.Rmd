@@ -14,6 +14,7 @@ library(knitr)
 library(psyphy)
 library(sjPlot)
 library(dplyr)
+library(viridis)
 library(ggplot2)
 # if (!("pacman" %in% installed.packages()[,])) {
 #     install.packages("pacman")
@@ -43,6 +44,8 @@ file.exists("analysis/data/child/data-aggregate/moco-beh-child.csv")
 ```{r load-files}
 df_child <- read.csv(file = "~/Documents/github/moco-psychophysics-child-adult/analysis/data/child/data-aggregate/moco-beh-child.csv", header = TRUE)
 df_adult <- read.csv(file = "~/Documents/github/moco-psychophysics-child-adult/analysis/data/moco-adult.csv", header = TRUE)
+df_child <- read.csv(file = "~/R/moco-psychophysics/analysis/data/child/data-aggregate/moco-beh-child.csv", header = TRUE)
+df_adult <- read.csv(file = "~/R/moco-psychophysics/analysis/data/moco-adult.csv", header = TRUE)
 df_adult$Speed <- factor(df_adult$Speed, labels = c("2 deg/s", "8 deg/s"))
 df_child$Speed <- factor(df_child$Speed, labels = c("2 deg/s", "8 deg/s"))
 df_child$SubID <- factor(df_child$SubID)
@@ -877,6 +880,7 @@ p
 
 
 ```{r plot-acc-coh-speed}
+df_child$Coh<-factor(df_child$Coh)
 df_p2_c_acc_speed_coh <- df_child %>% 
   filter(Group=="linear-radial coh [.15 .3 .45 .6]") %>%
   group_by(SubID, Speed, Coh) %>% 
@@ -892,15 +896,16 @@ p2_c_acc_speed_coh <-
   geom_bar(stat="identity", position = position_dodge()) +
   geom_errorbar(aes(ymin = Pct.Corr.mean - Pct.Corr.ci, ymax = Pct.Corr.mean + Pct.Corr.ci), width=.1,position=position_dodge(.9)) +
   ggtitle("Speed X Coherence Interaction in Children") +
-  ylab("Percentage of Accuracy (%)") +
-  xlab("Coherence levels") +
+  xlab("Coherence") +
   coord_cartesian(ylim=c(65,100)) +
-  theme_bw() +
-  theme.custom + # Position legend in bottom right
-  scale_colour_brewer(palette = "Set1")  +
+  theme_bw(base_size = 18) +
+ # theme.custom + # Position legend in bottom right
+  ylab("Mean Accuracy (%)") +
+  scale_fill_viridis(discrete=TRUE) +   
   theme(legend.position=c(0.1,0.9)) +
   theme(plot.title = element_text(hjust = 0.5)) 
 p2_c_acc_speed_coh
+ggsave("~/R/moco-psychophysics/analysis/pub_image/1_c_acc_speed_coh.pdf", p2_c_acc_speed_coh, width=12, height=10)
 ```
 ```{r plot-acc-coh-pattern}
 df_p2_c_acc_pattern_coh <- df_child %>% 
@@ -921,8 +926,8 @@ p2_c_acc_pat_coh <-
   ylab("Percentage of Accuracy (%)") +
   xlab("Coherence levels") +
   coord_cartesian(ylim=c(62,100)) +
-  theme_bw() +
-  theme.custom + # Position legend in bottom right
+  theme_bw(base_size = 18) +
+ # theme.custom + # Position legend in bottom right
   scale_colour_brewer(palette = "Set1")  +
   theme(legend.position=c(0.1,0.9)) +
   theme(plot.title = element_text(hjust = 0.5)) 
@@ -960,24 +965,26 @@ df_p3_c_acc_speed_age <- df_child %>%
   group_by(SubID, Speed, Age) %>% 
   summarize(N.corr = sum(Acc), 
             N.tot = n(), 
-            Pct.Corr.mean = N.corr/N.tot)  
+            Pct.Corr.mean = 100*N.corr/N.tot)  
 p4_c_acc_speed_age <- ggplot(data =  df_p3_c_acc_speed_age, 
        aes(y = Pct.Corr.mean, x = Age, color = Speed, group = Speed) ) + 
     geom_point() +
     geom_smooth() +
     ggtitle("Speed X Age Interaction in Children") +
-    ylab("Percentage of Accuracy (%)") +
     xlab("Age") +
  #   coord_cartesian(ylim=c(65,100)) +
-    theme_bw() +
-    theme.custom + # Position legend in bottom right
-    scale_colour_brewer(palette = "Set1")  +
+    theme_bw(base_size = 18) +
+  #  theme.custom + # Position legend in bottom right
+    ylab("Mean Accuracy (%)") +
+    scale_color_viridis(discrete=TRUE) +   
     theme(legend.position=c(0.1,0.9)) +
     theme(plot.title = element_text(hjust = 0.5)) 
  # geom_line(df_p4_c_acc_speed_age, aes(x=Coh, y = Pred*100), color= "red") + 
  #  geom_line(data=pred[21:40,], aes(x=Coh,Pred*100), color = "blue") 
 p4_c_acc_speed_age
-
+ggsave("~/R/moco-psychophysics/analysis/pub_image/2_c_acc_speed_age.pdf", p4_c_acc_speed_age, width=12, height=10)
+```
+```{r}
 df_p4_c_acc_speed_age <-df_p3_c_acc_speed_age  %>% 
   group_by(Speed, Age) %>%
   summarize(n=length(Pct.Corr),
@@ -1411,15 +1418,16 @@ p2_a_acc_pat_coh <-
   geom_bar(stat="identity", position = position_dodge()) +
   geom_errorbar(aes(ymin = Pct.Corr.mean - Pct.Corr.sem, ymax = Pct.Corr.mean + Pct.Corr.sem), width=.1,position=position_dodge(.9)) +
   ggtitle("Pattern X Coherence Interaction in Adults") +
-  ylab("Percentage of Accuracy (%)") +
-  xlab("Coherence levels") +
+  ylab("Mean Accuracy (%)") +
+  xlab("Coherence") +
   coord_cartesian(ylim=c(45,100)) +
-  theme_bw() +
-  theme.custom + # Position legend in bottom right
-  scale_colour_brewer(palette = "Set1")  +
-  theme(legend.position=c(0.1,0.9)) +
+  theme_bw(base_size = 18) +
+ # theme.custom + # Position legend in bottom right
+  scale_fill_viridis(discrete=TRUE) +
+  theme(legend.position=c(0.15,0.9)) +
   theme(plot.title = element_text(hjust = 0.5)) 
-p2_a_acc_pat_coh 
+p2_a_acc_pat_coh
+ggsave("~/R/moco-psychophysics/analysis/pub_image/3_a_acc_pat_coh.pdf", p2_a_acc_pat_coh, width=12, height=10)
 ```
 ```{r plot-acc-speed-gender}
 df_p2_a_acc_speed_gender <- df_adult %>% 
@@ -1436,15 +1444,16 @@ p2_a_acc_speed_gen <-
   geom_bar(stat="identity", position = position_dodge(), width = 0.5) +
   geom_errorbar(aes(ymin = Pct.Corr.mean - Pct.Corr.sem, ymax = Pct.Corr.mean + Pct.Corr.sem), width=.1,position=position_dodge(.5)) +
   ggtitle("Speed X Gender Interaction in Adults") +
-  ylab("Percentage of Accuracy (%)") +
+  ylab("Mean Accuracy (%)") +
   xlab("Optic flow Speed") +
   coord_cartesian(ylim=c(40,100)) +
-  theme_bw() +
-  theme.custom + # Position legend in bottom right
-  scale_colour_brewer(palette = "Set1")  +
+  theme_bw(base_size = 18) +
+ # theme.custom + # Position legend in bottom right
+  scale_fill_viridis(discrete=TRUE) +
   theme(legend.position=c(0.1,0.9)) +
   theme(plot.title = element_text(hjust = 0.5)) 
 p2_a_acc_speed_gen 
+ggsave("~/R/moco-psychophysics/analysis/pub_image/4_a_acc_speed_sex.pdf", p2_a_acc_speed_gen, width=12, height=10)
 ```
 ```{r plot-acc-gen-pattern}
 df_p2_a_acc_gen_pat <- df_adult %>% 
@@ -1461,15 +1470,16 @@ p2_a_acc_pat_gen <-
   geom_bar(stat="identity", position = position_dodge(), width = 0.5) +
   geom_errorbar(aes(ymin = Pct.Corr.mean - Pct.Corr.sem, ymax = Pct.Corr.mean + Pct.Corr.sem), width=.1,position=position_dodge(.5)) +
   ggtitle("Pattern X Gender Interaction in Adults") +
-  ylab("Percentage of Accuracy (%)") +
+  ylab("Mean Accuracy (%)") +
   xlab("Optic flow Pattern Type") +
   coord_cartesian(ylim=c(45,100)) +
-  theme_bw() +
-  theme.custom + # Position legend in bottom right
-  scale_colour_brewer(palette = "Set1")  +
+  theme_bw(base_size = 18) +
+# theme.custom + # Position legend in bottom right
+  scale_fill_viridis(discrete=TRUE) +
   theme(legend.position=c(0.1,0.9)) +
   theme(plot.title = element_text(hjust = 0.5)) 
 p2_a_acc_pat_gen
+ggsave("~/R/moco-psychophysics/analysis/pub_image/5_a_acc_pat_sex.pdf", p2_a_acc_pat_gen, width=12, height=10)
 ```
 
 ### Plot of actual  *p*(corr) and predicted *p*(corr) by condition
@@ -1852,13 +1862,13 @@ p2_all_acc_pat_group
 # library(psycho)
 # Let's simulate three participants with different results at a perceptual detection task
 df_child2 <- df_child %>%
-   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Response, AgeYrs) %>%
+   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Response, Age) %>%
    dplyr::filter(Coh==0.15) %>%
    dplyr::filter(Response %in% c("L","R"))
 str(df_child2)
 
 df_adult2 <- df_adult %>%
-   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Response) %>%
+   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Response,Age) %>%
    dplyr::filter(Coh==0.15)  %>%
    dplyr::filter(Response %in% c("L","R"))
 df_adult2$SubID<-factor(df_adult2$SubID)
@@ -1897,6 +1907,7 @@ em1<-emmeans(a_d, ~Gender)
 em2<-emmeans(a_d, ~group)
 em2<-emmeans(a_d, ~Speed)
 em2<-emmeans(a_d, ~PatternType)
+em2<-emmeans(a_d, ~Speed*group)
 # And pairwise difference among levels of inference validity?
 em1
 pairs(em1)
@@ -1905,6 +1916,28 @@ pairs(em2)
 df.sdt %>%
    dplyr::group_by(group) %>%
    summarize(mean=mean(dprime))
+```
+
+```{r}
+df_p2_c_sdt <- df.sdt %>% 
+  group_by(Speed, group) %>% 
+  summarize(dmean = mean(dprime, na.rm=TRUE),
+            dci = 1.96*sd(dprime, na.rm=TRUE)/sqrt(length(dprime)))  #computation of the standard error of the mean, ci is 1.96*sem
+p2_c_sdt_group_speed <- 
+  ggplot(data=df_p2_c_sdt, aes(x=Speed, y=dmean, fill = factor(group)) , width = 0.1) +
+  geom_bar(stat="identity", position = position_dodge()) +
+  geom_errorbar(aes(ymin = dmean - dci, ymax = dmean + dci), width=.1,position=position_dodge(.9)) +
+  ggtitle("Speed X Group Interaction (SDT)") +
+  xlab("Speed") +
+  coord_cartesian(ylim=c(0,2.7)) +
+  theme_bw(base_size = 18) +
+ # theme.custom + # Position legend in bottom right
+  ylab("Mean sensitivity (d')") +
+  scale_fill_viridis(discrete=TRUE) +   
+  theme(legend.position=c(0.1,0.9)) +
+  theme(plot.title = element_text(hjust = 0.5)) 
+p2_c_sdt_group_speed
+ggsave("C:/Users/yimin/OneDrive/Documents/R/moco-psychophysics/analysis/pub_image/6_sdt_speed_group.pdf", p2_c_sdt_group_speed, width=12, height=10)
 ```
 ``` {r anova-SDT-c}
 # better solution I currently find
