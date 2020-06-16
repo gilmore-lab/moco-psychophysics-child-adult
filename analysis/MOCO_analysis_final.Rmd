@@ -1,0 +1,337 @@
+---
+title: "MOCO_analysis_final"
+author: "yiming"
+date: "May 29, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lme4)
+library(knitr)
+library(psyphy)
+library(sjPlot)
+library(dplyr)
+library(viridis)
+library(ggplot2)
+# if (!("pacman" %in% installed.packages()[,])) {
+#     install.packages("pacman")
+#   }
+# library(pacman)
+# pacman::p_load(dplyr, ggplot2, knitr, psyphy, lme4, sjPlot)
+```
+
+```{r ggplot-themes}
+# "The APA has determined specifications for the size of figures and the fonts used in them. Figures of one column must be between 2 and 3.25 inches wide (5 to 8.45 cm). Two-column figures must be between 4.25 and 6.875 inches wide (10.6 to 17.5 cm). The height of figures should not exceed the top and bottom margins. The text in a figure should be in a san serif font (such as Helvetica, Arial, or Futura). The font size must be between eight and fourteen point. Use circles and squares to distinguish curves on a line graph (at the same font size as the other labels). "
+theme.custom <- theme(panel.background = element_rect(fill = "white", colour = "grey50"),
+                      plot.title = element_text(size=14, face="bold",hjust = 0.5),
+                      axis.title.x = element_text(size=14),
+                      axis.title.y = element_text(size=14),
+                      strip.text = element_text(size=14),
+                      axis.text = element_text(size=11),
+                      legend.position = c(0.9,0.17),
+#  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                   #   legend.title=element_blank(),
+                      legend.text=element_text(size=11))
+```
+
+## Import aggregate data
+
+Here we import the aggregate data file found in `analyses/data-aggregate/moco-beh-child.csv`, convert `AgeDays` to a categorical factor, `AgeYrs` (norminal) and 'Age' (ordinal), convert gender into 1 (female) and 2 (male). In this dataset, the NaN of Acc is fixed but the outliers are not cleaned up.
+
+file.exists("analysis/data/child/data-aggregate/moco-beh-child.csv")
+
+# load data
+```{r load-files}
+df_child <- read.csv(file = "~/R/moco-psychophysics/analysis/data/child/data-aggregate/moco-beh-child.csv", header = TRUE)
+df_adult <- read.csv(file = "~/R/moco-psychophysics/analysis/data/moco-adult.csv", header = TRUE)
+df_adult$Speed <- factor(df_adult$Speed, labels = c("2 deg/s", "8 deg/s"))
+df_child$Speed <- factor(df_child$Speed, labels = c("2 deg/s", "8 deg/s"))
+df_child$SubID <- factor(df_child$SubID)
+df_adult$SubID <- factor(df_adult$SubID)
+df_child$Age <- df_child$AgeDays/365.25
+df_child$AgeYrs <- ordered(cut(df_child$AgeDays/365.25, 
+                 breaks = c(5,6,7,8,9), 
+                 labels = c("5-year-old", "6-year-old", "7-year-old", "8-year-old")))
+df_adult %>% 
+  group_by( SubID) %>% 
+  summarize(N.corr = sum(Acc), 
+            N.tot = n(), 
+            Pct.Corr = N.corr/N.tot) -> 
+  df_adult.summary
+# df_child <- df_child %>%
+#   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Age, AgeYrs, Response)
+#df_adult <- df_adult %>%
+#   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Age, Response)
+```
+
+# child GLMM
+
+```{r acc-logit-full-child, eval=FALSE}
+form.fullmodel<- Acc ~ scale(Coh)*Speed*PatternType*scale(Age)*Gender + (1|SubID)
+model.acc.logit.full_c <- glmer(formula = form.fullmodel, family=binomial(mafc.logit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_child)
+summary(model.acc.logit.full_c)
+```
+```{r acc-logit-full-child, eval=FALSE}
+form.explor<- Acc ~ scale(Coh)*Speed*PatternType + (1|SubID)
+model.acc.logit.ex_c <- glmer(formula = form.explor, family=binomial(mafc.logit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_child)
+summary(model.acc.logit.ex_c)
+```
+```{r acc-logit-full-child, eval=FALSE}
+form.explor1<- Acc ~ scale(Coh)+Speed+PatternType+scale(Coh)*Speed + (1|SubID)
+model.acc.logit.ex1_c <- glmer(formula = form.explor1, family=binomial(mafc.logit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_child)
+summary(model.acc.logit.ex1_c)
+anova(model.acc.logit.ex1_c, model.acc.logit.ex_c)
+```
+```{r acc-logit-full-child, eval=FALSE}
+form.explor2<- Acc ~ scale(Coh)+Speed+PatternType+Gender+scale(Age)+scale(Coh)*Speed + (1|SubID)
+model.acc.logit.ex2_c <- glmer(formula = form.explor2, family=binomial(mafc.logit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_child)
+summary(model.acc.logit.ex2_c)
+anova(model.acc.logit.ex1_c, model.acc.logit.ex2_c)
+```
+```{r acc-logit-full-child, eval=FALSE}
+model.acc.logit_c<- Acc ~ scale(Coh)+Speed+PatternType+Gender+scale(Age)+scale(Coh)*Speed+ Speed*scale(Age)+ (1|SubID)
+model.acc.logit.ex3_c <- glmer(formula = form_c.explor3, family=binomial(mafc.logit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_child)
+summary(model.acc.logit_c)
+anova(model.acc.logit_c, model.acc.logit.ex2_c)
+```
+### probit& weibull link function
+```{r acc-probit-full, eval=FALSE}
+model.acc.probit_c<- glmer(formula = form_c.explor3, family=binomial(mafc.probit(2)),glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_child)
+model.acc.weibull_c<- glmer(formula = form_c.explor3, family=binomial(mafc.cloglog(2)),glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_child)
+car::Anova(model.acc.probit_c, model.acc.logit_c )
+car::Anova(model.acc.weibull_c, model.acc.logit_c )
+```
+```{r test-child}
+car::Anova(model.acc.logit_c, type=3)
+# for binomial response data
+#compute the marginal R-square
+#compute the variance in the fitted values
+VarF <- var(as.vector(fixef(model.acc.logit_c) %*% t(model.acc.logit_c@pp$X)))
+# VarCorr() extracts variance components
+# attr(VarCorr(lmer.model),’sc’)^2 extracts the residual variance, VarCorr()$plot extract the variance of the plot effect
+VarF/(VarF + VarCorr(model.acc.logit_c)[[1]][1] + attr(VarCorr(model.acc.logit_c), 'sc')^2 + (pi^2)/3)
+
+#compute the conditionnal R-square
+(VarF + VarCorr(model.acc.logit_c)[[1]][1])/(VarF + VarCorr(model.acc.logit_c)[[1]][1] + (attr(VarCorr(model.acc.logit_c), 'sc')^2) + (pi^2)/3)
+# The residual deviance in logistic regression is fixed to (pi ^ 2) / 3
+
+# get 95% CI
+se <- sqrt(diag(vcov(model.acc.logit_c)))
+# table of estimates with 95% CI
+tab <- cbind(OR = fixef(model.acc.logit_c), LL = fixef(model.acc.logit_c) - 1.96 * se, UL = fixef(model.acc.logit_c) + 1.96 * se)
+# however, this result is different from the below
+print(exp(tab))
+```
+
+
+# adult GLMM
+```{r acc-logit-full-adult, eval=FALSE}
+form.fullmodel<- Acc ~ scale(Coh)*Speed*PatternType*scale(Age)*Gender + (1|SubID)
+model.acc.logit.full_a <- glmer(formula = form.fullmodel, family=binomial(mafc.logit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_child)
+summary(model.acc.logit.full_a)
+```
+```{r acc-logit-full-adult, eval=FALSE}
+form.explor<- Acc ~ scale(Coh)*Speed*PatternType + (1|SubID)
+model.acc.logit.ex_a <- glmer(formula = form.explor, family=binomial(mafc.logit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_adult)
+summary(model.acc.logit.ex_a)
+```
+```{r acc-logit-full-adult, eval=FALSE}
+form.explor1<- Acc ~ scale(Coh)+Speed+PatternType+scale(Coh)*PatternType + (1|SubID)
+model.acc.logit.ex1_a <- glmer(formula = form.explor1, family=binomial(mafc.logit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_adult)
+summary(model.acc.logit.ex1_a)
+anova(model.acc.logit.ex1_a, model.acc.logit.ex_a)
+```
+```{r acc-logit-full-adult, eval=FALSE}
+form.explor2<- Acc ~ scale(Coh)+Speed+PatternType+scale(Coh)*PatternType + Gender+ (1|SubID)
+model.acc.logit.ex2_a <- glmer(formula = form.explor2, family=binomial(mafc.logit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_adult)
+summary(model.acc.logit.ex2_a)
+anova(model.acc.logit.ex1_a, model.acc.logit.ex2_a)
+```
+```{r acc-logit-full-adult, eval=FALSE}
+form_a.explor3<- Acc ~ scale(Coh)+Speed+PatternType+scale(Coh)*PatternType + Gender + Gender*Speed +Gender*PatternType+ (1|SubID)
+model.acc.logit_a <- glmer(formula = form_a.explor3, family=binomial(mafc.logit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_adult)
+summary(model.acc.probit_a)
+anova(model.acc.logit.ex2_a, model.acc.logit_a)
+```
+### probit& weibull link function
+```{r acc-probit-full, eval=FALSE}
+model.acc.probit_a<- glmer(formula = form_a.explor3, family=binomial(mafc.probit(2)),glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_adult)
+model.acc.weibull_a<- glmer(formula = form_a.explor3, family=binomial(mafc.cloglog(2)),glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_adult)
+anova(model.acc.logit_a, model.acc.probit_a, model.acc.weibull_a)
+
+```
+
+```{r test-adult}
+car::Anova(model.acc.logit_a, type=3)
+# for binomial response data
+#compute the marginal R-square
+#compute the variance in the fitted values
+VarF <- var(as.vector(fixef(model.acc.logit_a) %*% t(model.acc.logit_a@pp$X)))
+# VarCorr() extracts variance components
+# attr(VarCorr(lmer.model),’sc’)^2 extracts the residual variance, VarCorr()$plot extract the variance of the plot effect
+VarF/(VarF + VarCorr(model.acc.logit_a)[[1]][1] + attr(VarCorr(model.acc.logit_a), 'sc')^2 + (pi^2)/3)
+
+#compute the conditionnal R-square
+(VarF + VarCorr(model.acc.logit_a)[[1]][1])/(VarF + VarCorr(model.acc.logit_a)[[1]][1] + (attr(VarCorr(model.acc.logit_a), 'sc')^2) + (pi^2)/3)
+# The residual deviance in logistic regression is fixed to (pi ^ 2) / 3
+
+# get 95% CI
+se <- sqrt(diag(vcov(model.acc.logit_a)))
+# table of estimates with 95% CI
+tab <- cbind(OR = fixef(model.acc.logit_a), LL = fixef(model.acc.logit_a) - 1.96 * se, UL = fixef(model.acc.logit_a) + 1.96 * se)
+# however, this result is different from the below
+print(exp(tab))
+```
+```{r post-hoc}
+library(emmeans)
+emmeans(model.acc.logit_a, specs = pairwise ~ Gender:Speed, type = "response", adjust = "none")
+emmeans(model.acc.logit_a, specs = pairwise ~ Gender:PatternType, type = "response", adjust = "none")
+```
+
+
+
+
+
+# plot 
+# child
+```{r}
+library(viridis)
+# df_child$Coh<-factor(df_child$Coh)
+df_p2_c_acc_speed_coh <- df_child %>% 
+  filter(Group=="linear-radial coh [.15 .3 .45 .6]") %>%
+  group_by(SubID, Speed, Coh) %>% 
+  summarize(N.corr = sum(Acc), 
+            N.tot = n(), 
+            Pct.Corr = N.corr/N.tot)  %>% 
+  group_by(Speed, Coh) %>%
+  mutate(n=length(Pct.Corr),
+            Pct.Corr.mean = 100*mean(Pct.Corr, na.rm=TRUE),
+            Pct.Corr.ci = 1.96*100*sd(Pct.Corr, na.rm=TRUE)/sqrt(length(Pct.Corr)))  #computation of the standard error of the mean, ci is 1.96*sem
+df_p2_c_acc_speed_coh$Coh<-factor(df_p2_c_acc_speed_coh$Coh, levels=c("0.15","0.3","0.45","0.6"), labels=c("15%","30%","45%","60%"))
+p1<-ggplot(df_p2_c_acc_speed_coh, aes(x = Coh, y = Pct.Corr*100, color = Speed, shape=Speed),  alpha = 0.5) +
+  geom_point(data = df_p2_c_acc_speed_coh, aes(x = Coh, y = Pct.Corr.mean, color = Speed), size = 3, position = position_dodge(0.8)) +   
+  geom_errorbar(aes(ymin=Pct.Corr.mean-Pct.Corr.ci,ymax=Pct.Corr.mean+Pct.Corr.ci, color = Speed), position = position_dodge(0.8), width = .5)  + 
+  geom_jitter(position=position_dodge(0.8)) +
+  ggtitle("Speed X Coherence Interaction in Children") +
+  xlab("Coherence") +
+  theme.custom + # Position legend in bottom right
+  ylab("Mean Accuracy (%)") +
+  scale_color_viridis(discrete=TRUE) 
+#  theme(legend.title=element_blank())
+p1
+ggsave("~/R/moco-psychophysics/analysis/pub_image/8_c_acc_speed_coh_new.pdf", p1)
+```
+
+```{r plot-acc-age-speed}
+df_p3_c_acc_speed_age <- df_child %>% 
+  # filter(Group=="linear-radial coh [.15 .3 .45 .6]") %>%
+  group_by(SubID, Speed, Age) %>% 
+  summarize(N.corr = sum(Acc), 
+            N.tot = n(), 
+            Pct.Corr.mean = 100*N.corr/N.tot)  
+p4_c_acc_speed_age <- ggplot(data =  df_p3_c_acc_speed_age, 
+       aes(y = Pct.Corr.mean, x = Age, color = Speed, shape = Speed, group = Speed) ) + 
+    geom_point() +
+    geom_smooth(method="lm") +
+    ggtitle("Speed X Age Interaction in Children") +
+    xlim(5,9) +
+    xlab("Age") +
+    ylab("Mean Accuracy (%)") +
+    scale_color_viridis(discrete=TRUE) +   
+    theme.custom 
+p4_c_acc_speed_age
+# ggsave("~/R/moco-psychophysics/analysis/pub_image/2_c_acc_speed_age_new.pdf", p4_c_acc_speed_age)
+```
+
+# adult
+```{r plot-acc-age-speed}
+df_p4_c_acc_speed_age <- df_adult %>% 
+  # filter(Group=="linear-radial coh [.15 .3 .45 .6]") %>%
+  group_by(SubID, Speed, Age) %>% 
+  summarize(N.corr = sum(Acc), 
+            N.tot = n(), 
+            Pct.Corr.mean = 100*N.corr/N.tot)  
+p3_c_acc_speed_age <- ggplot(data =  df_p4_c_acc_speed_age, 
+       aes(y = Pct.Corr.mean, x = Age, color = Speed, shape = Speed, group = Speed) ) + 
+    geom_point() +
+    geom_smooth(method="lm") +
+    ggtitle("Speed X Age Interaction in Adults") +
+  #  xlim(18,24) +
+    xlab("Age") +
+    ylab("Mean Accuracy (%)") +
+    scale_color_viridis(discrete=TRUE) +   
+    theme.custom 
+p3_c_acc_speed_age
+# ggsave("~/R/moco-psychophysics/analysis/pub_image/3_a_acc_speed_age_new.pdf", p3_c_acc_speed_age)
+```
+
+```{r}
+df_p2_a_acc_pat_coh <- df_adult%>% 
+  group_by(SubID, PatternType, Coh) %>% 
+  summarize(N.corr = sum(Acc), 
+            N.tot = n(), 
+            Pct.Corr = N.corr/N.tot)  %>% 
+  group_by(PatternType, Coh) %>%
+  mutate(n=length(Pct.Corr),
+            Pct.Corr.mean = 100*mean(Pct.Corr, na.rm=TRUE),
+            Pct.Corr.ci = 1.96*100*sd(Pct.Corr, na.rm=TRUE)/sqrt(length(Pct.Corr)))  #computation of the standard error of the mean, ci is 1.96*sem
+df_p2_a_acc_pat_coh$Coh<-factor(df_p2_a_acc_pat_coh$Coh, levels=c("0.05","0.1","0.15","0.2"), labels=c("5%","10%","15%","20%"))
+df_p2_a_acc_pat_coh$Pattern<-factor(df_p2_a_acc_pat_coh$PatternType, levels=c("linear","radial"), labels=c("Linear","Radial"))
+p2<-ggplot(df_p2_a_acc_pat_coh, aes(x = Coh, y = Pct.Corr*100, color = Pattern, shape=Pattern),  alpha = 0.1) +
+  geom_point(data = df_p2_a_acc_pat_coh, aes(x = Coh, y = Pct.Corr.mean, color = Pattern), size = 3, position = position_dodge(0.8)) +   
+  geom_errorbar(aes(ymin=Pct.Corr.mean-Pct.Corr.ci,ymax=Pct.Corr.mean+Pct.Corr.ci, color = Pattern), position = position_dodge(0.8), width = .5)  + 
+  geom_jitter(position=position_dodge(0.8)) +
+  ggtitle("Pattern X Coherence Interaction in adults") +
+  xlab("Coherence") +
+  theme.custom + # Position legend in bottom right
+  ylab("Mean Accuracy (%)") +
+  scale_color_viridis(discrete=TRUE) 
+p2
+ggsave("~/R/moco-psychophysics/analysis/pub_image/8_a_acc_pattern_coh_new.pdf", p2)
+```
+```{r}
+df_p2_a_acc_gen_speed <- df_adult%>% 
+  group_by(SubID, Speed, Gender) %>% 
+  summarize(N.corr = sum(Acc), 
+            N.tot = n(), 
+            Pct.Corr = N.corr/N.tot)  %>% 
+  group_by(Speed, Gender) %>%
+  mutate(n=length(Pct.Corr),
+            Pct.Corr.mean = 100*mean(Pct.Corr, na.rm=TRUE),
+            Pct.Corr.ci = 1.96*100*sd(Pct.Corr, na.rm=TRUE)/sqrt(length(Pct.Corr)))  #computation of the standard error of the mean, ci is 1.96*sem
+# df_p2_a_acc_gen_speed$Speed<-factor(df_p2_a_acc_gen_speed$Speed, levels=c("2 deg/s","8 deg/s"), labels=c("2 deg/s","8 deg/s"))
+p5<-ggplot(df_p2_a_acc_gen_speed, aes(x = Gender, y = Pct.Corr*100, color = Speed, shape=Speed),  alpha = 0.5) +
+  geom_point(data = df_p2_a_acc_gen_speed, aes(x = Gender, y = Pct.Corr.mean, color = Speed), size = 3, position = position_dodge(0.8)) +   
+  geom_errorbar(aes(ymin=Pct.Corr.mean-Pct.Corr.ci,ymax=Pct.Corr.mean+Pct.Corr.ci, color = Speed), position = position_dodge(0.8), width = .5)  + 
+  geom_jitter(position=position_dodge(0.8)) +
+  ggtitle("Speed X Gender Interaction in adults") +
+  theme.custom + # Position legend in bottom right
+  ylab("Mean Accuracy (%)") +
+  scale_color_viridis(discrete=TRUE) 
+p5
+ggsave("~/R/moco-psychophysics/analysis/pub_image/9_a_acc_speed_gender_new.pdf", p5, height=7,width=7)
+```
+```{r}
+df_p2_a_acc_gen_pat <- df_adult%>% 
+  group_by(SubID, PatternType, Gender) %>% 
+  summarize(N.corr = sum(Acc), 
+            N.tot = n(), 
+            Pct.Corr = N.corr/N.tot)  %>% 
+  group_by(PatternType, Gender) %>%
+  mutate(n=length(Pct.Corr),
+            Pct.Corr.mean = 100*mean(Pct.Corr, na.rm=TRUE),
+            Pct.Corr.ci = 1.96*100*sd(Pct.Corr, na.rm=TRUE)/sqrt(length(Pct.Corr)))  #computation of the standard error of the mean, ci is 1.96*sem
+df_p2_a_acc_gen_pat$Pattern<-factor(df_p2_a_acc_gen_pat$PatternType, levels=c("linear","radial"), labels=c("Linear","Radial"))
+p5<-ggplot(df_p2_a_acc_gen_pat, aes(x = Gender, y = Pct.Corr*100, color = Pattern, shape=Pattern),  alpha = 0.5) +
+  geom_point(data = df_p2_a_acc_gen_pat, aes(x = Gender, y = Pct.Corr.mean, color = Pattern), size = 3, position = position_dodge(0.8)) +   
+  geom_errorbar(aes(ymin=Pct.Corr.mean-Pct.Corr.ci,ymax=Pct.Corr.mean+Pct.Corr.ci, color = Pattern), position = position_dodge(0.8), width = .5)  + 
+  geom_jitter(position=position_dodge(0.8)) +
+  ggtitle("Pattern X Gender Interaction in adults") +
+  theme.custom + # Position legend in bottom right
+  ylab("Mean Accuracy (%)") +
+  scale_color_viridis(discrete=TRUE) 
+p5
+ggsave("~/R/moco-psychophysics/analysis/pub_image/8_a_acc_pattern_gender_new.pdf", p5, height=7,width=7)
+```

@@ -54,10 +54,10 @@ df_child$Age <- df_child$AgeDays/365.25
 df_child$AgeYrs <- ordered(cut(df_child$AgeDays/365.25, 
                  breaks = c(5,6,7,8,9), 
                  labels = c("5-year-old", "6-year-old", "7-year-old", "8-year-old")))
-df_child <- df_child %>%
-   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Age, AgeYrs, Response)
-df_adult <- df_adult %>%
-   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Age, Response)
+# df_child <- df_child %>%
+#   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Age, AgeYrs, Response)
+#df_adult <- df_adult %>%
+#   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Age, Response)
 df_all <- read.csv(file="~/Documents/github/moco-psychophysics-child-adult/analysis/CombinedData.csv", header=TRUE, sep=",")
 df_all$SubID <- factor(df_all$SubID)
 df_child1 <- df_child %>%
@@ -888,9 +888,10 @@ df_p2_c_acc_speed_coh <- df_child %>%
             N.tot = n(), 
             Pct.Corr = N.corr/N.tot)  %>% 
   group_by(Speed, Coh) %>%
-  summarize(n=length(Pct.Corr),
+  mutate(n=length(Pct.Corr),
             Pct.Corr.mean = 100*mean(Pct.Corr, na.rm=TRUE),
             Pct.Corr.ci = 1.96*100*sd(Pct.Corr, na.rm=TRUE)/sqrt(length(Pct.Corr)))  #computation of the standard error of the mean, ci is 1.96*sem
+
 p2_c_acc_speed_coh <- 
   ggplot(data=df_p2_c_acc_speed_coh, aes(x=Coh, y=Pct.Corr.mean, fill = factor(Speed)) , width = 0.1) +
   geom_bar(stat="identity", position = position_dodge()) +
@@ -907,6 +908,25 @@ p2_c_acc_speed_coh <-
 p2_c_acc_speed_coh
 ggsave("~/R/moco-psychophysics/analysis/pub_image/1_c_acc_speed_coh.pdf", p2_c_acc_speed_coh, width=12, height=10)
 ```
+```{r}
+library(viridis)
+df_p2_c_acc_speed_coh$Coh<-factor(df_p2_c_acc_speed_coh$Coh, levels=c("0.15","0.3","0.45","0.6"), labels=c("5%","10%","15%","20%"))
+p1<-ggplot(df_p2_c_acc_speed_coh, aes(x = Coh, y = Pct.Corr*100, color = Speed),  alpha = 0.1) + geom_point(data = df_p2_c_acc_speed_coh, aes(x = Coh, y = Pct.Corr.mean, color = Speed), size = 3, position = position_dodge(0.8)) + geom_errorbar(aes(ymin=Pct.Corr.mean-Pct.Corr.ci,ymax=Pct.Corr.mean+Pct.Corr.ci, color = Speed), position = position_dodge(0.8), width = .5) + geom_jitter(position=position_dodge(0.8)) +
+  ggtitle("Speed X Coherence Interaction in Children") +
+  xlab("Coherence") +
+ # coord_cartesian(ylim=c(65,100)) +
+  theme_bw(base_size = 18) +
+ # theme.custom + # Position legend in bottom right
+  ylab("Mean Accuracy (%)") +
+  scale_color_viridis(discrete=TRUE) +
+#  theme(legend.title=element_blank())
+  theme(legend.position=c(0.87,0.18)) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+p1
+ggsave("~/R/moco-psychophysics/analysis/pub_image/8_c_acc_speed_coh.pdf", p1, width=12, height=10)
+```
+
 ```{r plot-acc-coh-pattern}
 df_p2_c_acc_pattern_coh <- df_child %>% 
   filter(Group=="linear-radial coh [.15 .3 .45 .6]") %>%
@@ -977,12 +997,13 @@ p4_c_acc_speed_age <- ggplot(data =  df_p3_c_acc_speed_age,
   #  theme.custom + # Position legend in bottom right
     ylab("Mean Accuracy (%)") +
     scale_color_viridis(discrete=TRUE) +   
-    theme(legend.position=c(0.1,0.9)) +
-    theme(plot.title = element_text(hjust = 0.5)) 
+    theme(legend.position=c(0.9,0.17)) +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
  # geom_line(df_p4_c_acc_speed_age, aes(x=Coh, y = Pred*100), color= "red") + 
  #  geom_line(data=pred[21:40,], aes(x=Coh,Pred*100), color = "blue") 
 p4_c_acc_speed_age
-ggsave("~/R/moco-psychophysics/analysis/pub_image/2_c_acc_speed_age.pdf", p4_c_acc_speed_age, width=12, height=10)
+# ggsave("~/R/moco-psychophysics/analysis/pub_image/2_c_acc_speed_age.pdf", p4_c_acc_speed_age, width=12, height=10)
 ```
 ```{r}
 df_p4_c_acc_speed_age <-df_p3_c_acc_speed_age  %>% 
@@ -1006,6 +1027,8 @@ p2_c_acc_speed_coh <-
   theme(plot.title = element_text(hjust = 0.5)) 
 p2_c_acc_speed_coh
 ```
+
+
 
 
 
@@ -1410,9 +1433,9 @@ df_p2_a_acc_coh_pat <- df_adult %>%
             N.tot = n(), 
             Pct.Corr = N.corr/N.tot)  %>% 
   group_by(Coh, PatternType) %>%
-  summarize(n=length(Pct.Corr),
+  mutate(n=length(Pct.Corr),
             Pct.Corr.mean = 100*mean(Pct.Corr, na.rm=TRUE),
-            Pct.Corr.sem = 100*sd(Pct.Corr, na.rm=TRUE)/sqrt(length(Pct.Corr)))  #computation of the standard error of the mean, ci is 1.96*sem
+            Pct.Corr.ci = 1.96*100*sd(Pct.Corr, na.rm=TRUE)/sqrt(length(Pct.Corr)))  #computation of the standard error of the mean, ci is 1.96*sem
 p2_a_acc_pat_coh <- 
   ggplot(data=df_p2_a_acc_coh_pat, aes(x=factor(Coh), y=Pct.Corr.mean, fill = factor(PatternType)) , width = 0.1) +
   geom_bar(stat="identity", position = position_dodge()) +
@@ -1429,6 +1452,25 @@ p2_a_acc_pat_coh <-
 p2_a_acc_pat_coh
 ggsave("~/R/moco-psychophysics/analysis/pub_image/3_a_acc_pat_coh.pdf", p2_a_acc_pat_coh, width=12, height=10)
 ```
+```{r}
+library(viridis)
+ df_p2_a_acc_coh_pat$Coh<-factor(df_p2_a_acc_coh_pat$Coh, levels=c("0.05","0.1","0.15","0.2"), labels=c("5%","10%","15%","20%"))
+p2<-ggplot(df_p2_a_acc_coh_pat, aes(x = Coh, y = Pct.Corr*100, color = PatternType),  alpha = 0.1) + geom_point(data = df_p2_a_acc_coh_pat, aes(x = Coh, y = Pct.Corr.mean, color = PatternType), size = 4, position = position_dodge(0.8)) + geom_errorbar(aes(ymin=Pct.Corr.mean-Pct.Corr.ci,ymax=Pct.Corr.mean+Pct.Corr.ci, color = PatternType), position = position_dodge(0.8), width = .5) + geom_jitter(position=position_dodge(0.8)) +
+  ggtitle("Pattern X Coherence Interaction in Adults") +
+  xlab("Coherence") +
+#  coord_cartesian(xlim=c(0,0.2)) +
+  theme_bw(base_size = 18) +
+ # theme.custom + # Position legend in bottom right
+  ylab("Mean Accuracy (%)") +
+  scale_color_viridis(discrete=TRUE) +
+#  theme(legend.title=element_blank())
+  theme(legend.position=c(0.90,0.14)) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+#  scale_x_discrete(labels = c("0.05","0.10","0.15","0.20"))+ 
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+p2
+ggsave("~/R/moco-psychophysics/analysis/pub_image/9_a_acc_coh_pat.pdf", p2, width=12, height=10)
+```
 ```{r plot-acc-speed-gender}
 df_p2_a_acc_speed_gender <- df_adult %>% 
   group_by(SubID, Speed, Gender) %>% 
@@ -1436,9 +1478,9 @@ df_p2_a_acc_speed_gender <- df_adult %>%
             N.tot = n(), 
             Pct.Corr = N.corr/N.tot)  %>% 
   group_by(Speed, Gender) %>%
-  summarize(n=length(Pct.Corr),
+  mutate(n=length(Pct.Corr),
             Pct.Corr.mean = 100*mean(Pct.Corr, na.rm=TRUE),
-            Pct.Corr.sem = 100*sd(Pct.Corr, na.rm=TRUE)/sqrt(length(Pct.Corr)))  #computation of the standard error of the mean, ci is 1.96*sem
+            Pct.Corr.ci = 1.96*100*sd(Pct.Corr, na.rm=TRUE)/sqrt(length(Pct.Corr)))  #computation of the standard error of the mean, ci is 1.96*sem
 p2_a_acc_speed_gen <- 
   ggplot(data=df_p2_a_acc_speed_gender, aes(x=factor(Speed), y=Pct.Corr.mean, fill = factor(Gender)) ) +
   geom_bar(stat="identity", position = position_dodge(), width = 0.5) +
@@ -1455,6 +1497,22 @@ p2_a_acc_speed_gen <-
 p2_a_acc_speed_gen 
 ggsave("~/R/moco-psychophysics/analysis/pub_image/4_a_acc_speed_sex.pdf", p2_a_acc_speed_gen, width=12, height=10)
 ```
+```{r}
+p3<-ggplot(df_p2_a_acc_speed_gender, aes(x = Speed, y = Pct.Corr*100, color = Gender),  alpha = 0.1) + geom_point(data = df_p2_a_acc_speed_gender, aes(x = Speed, y = Pct.Corr.mean, color = Gender), size = 4, position = position_dodge(0.8)) + geom_errorbar(aes(ymin=Pct.Corr.mean-Pct.Corr.ci,ymax=Pct.Corr.mean+Pct.Corr.ci, color = Gender), position = position_dodge(0.8), width = .5) + geom_jitter(position=position_dodge(0.8)) +
+   ggtitle("Speed X Gender Interaction in Adults") +
+  ylab("Mean Accuracy (%)") +
+  xlab("Optic flow Speed") +
+#  coord_cartesian(xlim=c(0,0.2)) +
+  theme_bw(base_size = 18) +
+ # theme.custom + # Position legend in bottom right
+  scale_color_viridis(discrete=TRUE) +
+#  theme(legend.title=element_blank())
+  theme(legend.position=c(0.90,0.14)) +
+  theme(plot.title = element_text(hjust = 0.5))+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+#  scale_x_discrete(labels = c("0.05","0.10","0.15","0.20"))
+p3
+ggsave("~/R/moco-psychophysics/analysis/pub_image/10_a_acc_speed_sex.pdf", p3, width=12, height=10)
+```
 ```{r plot-acc-gen-pattern}
 df_p2_a_acc_gen_pat <- df_adult %>% 
   group_by(SubID, PatternType, Gender) %>% 
@@ -1462,9 +1520,9 @@ df_p2_a_acc_gen_pat <- df_adult %>%
             N.tot = n(), 
             Pct.Corr = N.corr/N.tot)  %>% 
   group_by(Gender, PatternType) %>%
-  summarize(n=length(Pct.Corr),
+  mutate(n=length(Pct.Corr),
             Pct.Corr.mean = 100*mean(Pct.Corr, na.rm=TRUE),
-            Pct.Corr.sem = 100*sd(Pct.Corr, na.rm=TRUE)/sqrt(length(Pct.Corr)))  #computation of the standard error of the mean, ci is 1.96*sem
+            Pct.Corr.ci = 1.96*100*sd(Pct.Corr, na.rm=TRUE)/sqrt(length(Pct.Corr)))  #computation of the standard error of the mean, ci is 1.96*sem
 p2_a_acc_pat_gen <- 
   ggplot(data=df_p2_a_acc_gen_pat, aes(x=factor(PatternType), y=Pct.Corr.mean, fill = factor(Gender)) ) +
   geom_bar(stat="identity", position = position_dodge(), width = 0.5) +
@@ -1477,9 +1535,27 @@ p2_a_acc_pat_gen <-
 # theme.custom + # Position legend in bottom right
   scale_fill_viridis(discrete=TRUE) +
   theme(legend.position=c(0.1,0.9)) +
-  theme(plot.title = element_text(hjust = 0.5)) 
+  theme(plot.title = element_text(hjust = 0.5)) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 p2_a_acc_pat_gen
 ggsave("~/R/moco-psychophysics/analysis/pub_image/5_a_acc_pat_sex.pdf", p2_a_acc_pat_gen, width=12, height=10)
+```
+
+```{r}
+p4<-ggplot(df_p2_a_acc_gen_pat, aes(x = PatternType, y = Pct.Corr*100, color = Gender),  alpha = 0.1) + geom_point(data = df_p2_a_acc_gen_pat, aes(x = PatternType, y = Pct.Corr.mean, color = Gender), size = 4, position = position_dodge(0.8)) + geom_errorbar(aes(ymin=Pct.Corr.mean-Pct.Corr.ci,ymax=Pct.Corr.mean+Pct.Corr.ci, color = Gender), position = position_dodge(0.8), width = .5) + geom_jitter(position=position_dodge(0.8)) +
+   ggtitle("Pattern X Gender Interaction in Adults") +
+  ylab("Mean Accuracy (%)") +
+  xlab("Optic flow Pattern Type") +
+#  coord_cartesian(xlim=c(0,0.2)) +
+  theme_bw(base_size = 18) +
+ # theme.custom + # Position legend in bottom right
+  scale_color_viridis(discrete=TRUE) +
+#  theme(legend.title=element_blank())
+  theme(legend.position=c(0.90,0.14)) +
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+#  scale_x_discrete(labels = c("0.05","0.10","0.15","0.20"))
+p4
+ggsave("~/R/moco-psychophysics/analysis/pub_image/11_a_acc_pat_sex.pdf", p4, width=12, height=10)
 ```
 
 ### Plot of actual  *p*(corr) and predicted *p*(corr) by condition
@@ -1899,6 +1975,22 @@ df.sdt$SubID<-as.integer(df.sdt$SubID)
 a_d <- aov_ez(id="SubID", dv = "dprime", df.sdt, between = c("Gender", "group"),within=c("Speed","PatternType") )
 summary(a_d)
 knitr::kable(nice(a_d))
+# calculate power
+library(pwr)
+pwr.anova.test(k = 2, n = 50, f = 0.17, sig.level = 0.05, power = NULL)  # for pattern
+pwr.anova.test(k = 2, n = 29, f = 0.15, sig.level = 0.05, power = NULL)  # for group
+pwr.f2.test(u =27, v = 1, f2 = 34.94, sig.level = 0.05, power = NULL) # age effect in children
+## chilren only
+df.sdt.c<-df.sdt %>% filter(group=="child")
+a_d.c <- aov_ez(id="SubID", dv = "dprime", df.sdt.c, between = c("Gender"),within=c("Speed","PatternType") )
+summary(a_d.c)
+knitr::kable(nice(a_d.c))
+## adults only
+df.sdt.a<-df.sdt %>% filter(group=="adult")
+a_d.a <- aov_ez(id="SubID", dv = "dprime", df.sdt.a, between = c("Gender"),within=c("Speed","PatternType") )
+summary(a_d.a)
+knitr::kable(nice(a_d.a))
+
 # What about the estimated marginal means of the design?
 library(emmeans)
 emmeans(a_d, ~Gender* group * Speed*PatternType)
@@ -1908,6 +2000,8 @@ em2<-emmeans(a_d, ~group)
 em2<-emmeans(a_d, ~Speed)
 em2<-emmeans(a_d, ~PatternType)
 em2<-emmeans(a_d, ~Speed*group)
+em2<-emmeans(a_d, ~PatternType*group)
+em2<-emmeans(a_d, ~Gender*PatternType*group)
 # And pairwise difference among levels of inference validity?
 em1
 pairs(em1)
@@ -1916,6 +2010,26 @@ pairs(em2)
 df.sdt %>%
    dplyr::group_by(group) %>%
    summarize(mean=mean(dprime))
+```
+```{r}
+alpha=0.05
+data_summary <- function(x) {
+   m <- mean(x)
+   se=sd(x) / sqrt(length(x))
+   t=qt((1-alpha)/2 + .5, length(x)-1)   # tend to 1.96 if sample size is big enough
+   CI=t*se
+   ymin <- m-CI
+   ymax <- m+CI
+   return(c(y=m,ymin=ymin,ymax=ymax))
+}
+ggplot(data = df.sdt, aes(y = dprime, x = Speed,fill=group)) + # Move y and x here so than they can be used in stat_*
+    geom_dotplot(aes(fill = group),   # Use fill = Species here not in ggplot()
+                 binaxis = "y",         # which axis to bin along
+                 binwidth = 0.1,        # Minimal difference considered diffeerent
+                 stackdir = "center", # Centered
+                 position=position_dodge(0.9)   # separate
+                 ) +
+    stat_summary(fun.data=data_summary,position=position_dodge(0.9))
 ```
 
 ```{r}
