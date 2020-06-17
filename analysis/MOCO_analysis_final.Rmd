@@ -22,19 +22,6 @@ library(ggplot2)
 # pacman::p_load(dplyr, ggplot2, knitr, psyphy, lme4, sjPlot)
 ```
 
-```{r ggplot-themes}
-# "The APA has determined specifications for the size of figures and the fonts used in them. Figures of one column must be between 2 and 3.25 inches wide (5 to 8.45 cm). Two-column figures must be between 4.25 and 6.875 inches wide (10.6 to 17.5 cm). The height of figures should not exceed the top and bottom margins. The text in a figure should be in a san serif font (such as Helvetica, Arial, or Futura). The font size must be between eight and fourteen point. Use circles and squares to distinguish curves on a line graph (at the same font size as the other labels). "
-theme.custom <- theme(panel.background = element_rect(fill = "white", colour = "grey50"),
-                      plot.title = element_text(size=14, face="bold",hjust = 0.5),
-                      axis.title.x = element_text(size=14),
-                      axis.title.y = element_text(size=14),
-                      strip.text = element_text(size=14),
-                      axis.text = element_text(size=11),
-                      legend.position = c(0.9,0.17),
-#  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-                   #   legend.title=element_blank(),
-                      legend.text=element_text(size=11))
-```
 
 ## Import aggregate data
 
@@ -91,10 +78,10 @@ summary(model.acc.logit.ex2_c)
 anova(model.acc.logit.ex1_c, model.acc.logit.ex2_c)
 ```
 ```{r acc-logit-full-child, eval=FALSE}
-model.acc.logit_c<- Acc ~ scale(Coh)+Speed+PatternType+Gender+scale(Age)+scale(Coh)*Speed+ Speed*scale(Age)+ (1|SubID)
-model.acc.logit.ex3_c <- glmer(formula = form_c.explor3, family=binomial(mafc.logit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_child)
+form_c.explor3<- Acc ~ scale(Coh)+Speed+PatternType+Gender+scale(Age)+scale(Coh)*Speed+ Speed*scale(Age)+ (1|SubID)
+model.acc.logit_c <- glmer(formula = form_c.explor3, family=binomial(mafc.logit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_child)
 summary(model.acc.logit_c)
-anova(model.acc.logit_c, model.acc.logit.ex2_c)
+car::Anova(model.acc.logit_c, model.acc.logit.ex2_c)
 ```
 ### probit& weibull link function
 ```{r acc-probit-full, eval=FALSE}
@@ -152,7 +139,7 @@ anova(model.acc.logit.ex1_a, model.acc.logit.ex2_a)
 ```{r acc-logit-full-adult, eval=FALSE}
 form_a.explor3<- Acc ~ scale(Coh)+Speed+PatternType+scale(Coh)*PatternType + Gender + Gender*Speed +Gender*PatternType+ (1|SubID)
 model.acc.logit_a <- glmer(formula = form_a.explor3, family=binomial(mafc.logit(2)), glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)), data = df_adult)
-summary(model.acc.probit_a)
+summary(model.acc.logit_a)
 anova(model.acc.logit.ex2_a, model.acc.logit_a)
 ```
 ### probit& weibull link function
@@ -183,11 +170,16 @@ se <- sqrt(diag(vcov(model.acc.logit_a)))
 tab <- cbind(OR = fixef(model.acc.logit_a), LL = fixef(model.acc.logit_a) - 1.96 * se, UL = fixef(model.acc.logit_a) + 1.96 * se)
 # however, this result is different from the below
 print(exp(tab))
+
 ```
 ```{r post-hoc}
 library(emmeans)
 emmeans(model.acc.logit_a, specs = pairwise ~ Gender:Speed, type = "response", adjust = "none")
 emmeans(model.acc.logit_a, specs = pairwise ~ Gender:PatternType, type = "response", adjust = "none")
+
+# way 1
+lsmeans::lsmeans(model.acc.logit_a, pairwise~Gender:Speed, adjust="tukey")
+lsmeans::lsmeans(model.acc.logit_a, pairwise~Gender:PatternType, adjust="tukey")
 ```
 
 
@@ -195,9 +187,50 @@ emmeans(model.acc.logit_a, specs = pairwise ~ Gender:PatternType, type = "respon
 
 
 # plot 
+```{r ggplot-themes}
+# "The APA has determined specifications for the size of figures and the fonts used in them. Figures of one column must be between 2 and 3.25 inches wide (5 to 8.45 cm). Two-column figures must be between 4.25 and 6.875 inches wide (10.6 to 17.5 cm). The height of figures should not exceed the top and bottom margins. The text in a figure should be in a san serif font (such as Helvetica, Arial, or Futura). The font size must be between eight and fourteen point. Use circles and squares to distinguish curves on a line graph (at the same font size as the other labels). "
+theme.custom <- theme(panel.background = element_rect(fill = "white", colour = "grey50"),
+                      plot.title = element_text(size=18, face="bold",hjust = 0.5),
+                      axis.title.x = element_text(size=18),
+                      axis.title.y = element_text(size=18),
+                      strip.text = element_text(size=18),
+                      axis.text = element_text(size=18),
+                      legend.position = c(0.85,0.14),
+                      legend.title=element_text(size=18),
+#  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                   #   legend.title=element_blank(),
+                      legend.text=element_text(size=18))
+```
+
 # child
 ```{r}
-library(viridis)
+# df_child$Coh<-factor(df_child$Coh)
+df_p2_c_acc_pat_coh <- df_child %>% 
+  filter(Group=="linear-radial coh [.15 .3 .45 .6]") %>%
+  group_by(SubID, PatternType, Coh) %>% 
+  summarize(N.corr = sum(Acc), 
+            N.tot = n(), 
+            Pct.Corr = N.corr/N.tot)  %>% 
+  group_by(PatternType, Coh) %>%
+  mutate(n=length(Pct.Corr),
+            Pct.Corr.mean = 100*mean(Pct.Corr, na.rm=TRUE),
+            Pct.Corr.ci = 1.96*100*sd(Pct.Corr, na.rm=TRUE)/sqrt(length(Pct.Corr)))  #computation of the standard error of the mean, ci is 1.96*sem
+df_p2_c_acc_pat_coh$Coh<-factor(df_p2_c_acc_pat_coh$Coh, levels=c("0.15","0.3","0.45","0.6"), labels=c("15%","30%","45%","60%"))
+df_p2_c_acc_pat_coh$Pattern<-factor(df_p2_c_acc_pat_coh$PatternType, levels=c("linear","radial"), labels=c("Linear","Radial"))
+p0<-ggplot(df_p2_c_acc_pat_coh, aes(x = Coh, y = Pct.Corr*100, color = PatternType, shape=PatternType),  alpha = 0.5) +
+  geom_point(data = df_p2_c_acc_pat_coh, aes(x = Coh, y = Pct.Corr.mean, color = PatternType), size = 3, position = position_dodge(0.8)) +   
+  geom_errorbar(aes(ymin=Pct.Corr.mean-Pct.Corr.ci,ymax=Pct.Corr.mean+Pct.Corr.ci, color = PatternType), position = position_dodge(0.8), width = .5)  + 
+  geom_jitter(position=position_dodge(0.8)) +
+  ggtitle("Children: Accuracy by coherence and pattern") +
+  xlab("Coherence") +
+  theme.custom + # Position legend in bottom right
+  ylab("Mean Accuracy (%)") +
+  scale_color_viridis(discrete=TRUE) +
+  annotate("text", x = 0.6, y = 100, label = "a)", size= 12)
+p0
+# ggsave("~/R/moco-psychophysics/analysis/pub_image/8_c_acc_speed_coh_new.pdf", p0)
+```
+```{r}
 # df_child$Coh<-factor(df_child$Coh)
 df_p2_c_acc_speed_coh <- df_child %>% 
   filter(Group=="linear-radial coh [.15 .3 .45 .6]") %>%
@@ -214,14 +247,15 @@ p1<-ggplot(df_p2_c_acc_speed_coh, aes(x = Coh, y = Pct.Corr*100, color = Speed, 
   geom_point(data = df_p2_c_acc_speed_coh, aes(x = Coh, y = Pct.Corr.mean, color = Speed), size = 3, position = position_dodge(0.8)) +   
   geom_errorbar(aes(ymin=Pct.Corr.mean-Pct.Corr.ci,ymax=Pct.Corr.mean+Pct.Corr.ci, color = Speed), position = position_dodge(0.8), width = .5)  + 
   geom_jitter(position=position_dodge(0.8)) +
-  ggtitle("Speed X Coherence Interaction in Children") +
+  ggtitle("Children: Accuracy by coherence and speed") +
   xlab("Coherence") +
   theme.custom + # Position legend in bottom right
   ylab("Mean Accuracy (%)") +
-  scale_color_viridis(discrete=TRUE) 
+  scale_color_viridis(discrete=TRUE) +
+  annotate("text", x = 0.6, y = 100, label = "b)", size= 12)
 #  theme(legend.title=element_blank())
 p1
-ggsave("~/R/moco-psychophysics/analysis/pub_image/8_c_acc_speed_coh_new.pdf", p1)
+# ggsave("~/R/moco-psychophysics/analysis/pub_image/8_c_acc_speed_coh_new.pdf", p1)
 ```
 
 ```{r plot-acc-age-speed}
@@ -231,20 +265,52 @@ df_p3_c_acc_speed_age <- df_child %>%
   summarize(N.corr = sum(Acc), 
             N.tot = n(), 
             Pct.Corr.mean = 100*N.corr/N.tot)  
-p4_c_acc_speed_age <- ggplot(data =  df_p3_c_acc_speed_age, 
+p2 <- ggplot(data =  df_p3_c_acc_speed_age, 
        aes(y = Pct.Corr.mean, x = Age, color = Speed, shape = Speed, group = Speed) ) + 
     geom_point() +
     geom_smooth(method="lm") +
-    ggtitle("Speed X Age Interaction in Children") +
+    ggtitle("Children: Accuracy by age and speed") +
     xlim(5,9) +
     xlab("Age") +
     ylab("Mean Accuracy (%)") +
     scale_color_viridis(discrete=TRUE) +   
-    theme.custom 
-p4_c_acc_speed_age
-# ggsave("~/R/moco-psychophysics/analysis/pub_image/2_c_acc_speed_age_new.pdf", p4_c_acc_speed_age)
+    theme.custom +
+    annotate("text", x = 5, y = 100, label = "c)", size= 12)  
+p2
+# ggsave("~/R/moco-psychophysics/analysis/pub_image/2_c_acc_speed_age_new.pdf", p2)
 ```
 
+```{r}
+df_p2_a_acc_gen_pat <- df_child%>% 
+  group_by(SubID, PatternType, Gender) %>% 
+  summarize(N.corr = sum(Acc), 
+            N.tot = n(), 
+            Pct.Corr = N.corr/N.tot)  %>% 
+  group_by(PatternType, Gender) %>%
+  mutate(n=length(Pct.Corr),
+            Pct.Corr.mean = 100*mean(Pct.Corr, na.rm=TRUE),
+            Pct.Corr.ci = 1.96*100*sd(Pct.Corr, na.rm=TRUE)/sqrt(length(Pct.Corr)))  #computation of the standard error of the mean, ci is 1.96*sem
+df_p2_a_acc_gen_pat$Pattern<-factor(df_p2_a_acc_gen_pat$PatternType, levels=c("linear","radial"), labels=c("Linear","Radial"))
+p3<-ggplot(df_p2_a_acc_gen_pat, aes(x = Gender, y = Pct.Corr*100, color = Pattern, shape=Pattern),  alpha = 0.5) +
+  geom_point(data = df_p2_a_acc_gen_pat, aes(x = Gender, y = Pct.Corr.mean, color = Pattern), size = 3, position = position_dodge(0.8)) +   
+  geom_errorbar(aes(ymin=Pct.Corr.mean-Pct.Corr.ci,ymax=Pct.Corr.mean+Pct.Corr.ci, color = Pattern), position = position_dodge(0.8), width = .5)  + 
+  geom_jitter(position=position_dodge(0.8)) +
+  ggtitle("Children: Accuracy by sex and pattern") +
+  theme.custom + # Position legend in bottom right
+  ylab("Mean Accuracy (%)") +
+  scale_color_viridis(discrete=TRUE) +
+  annotate("text", x = 0.5, y = 100, label = "d)", size= 12)
+p3
+```
+
+```{r}
+library(gridExtra)
+#p = grid.arrange(ncol = 2, nrow = 2, p0, p1, p2,p3)
+p_c = grid.arrange(layout_matrix = rbind(c(1,2),
+                                       c(3,4)), p0, p1, p2,p3)
+#labels = c("a", "b", "c")
+ggsave(plot = p_c, filename = "~/R/moco-psychophysics/analysis/pub_image/child.png", units = "in", height = 12, width = 12, dpi = 600 )
+```
 # adult
 ```{r plot-acc-age-speed}
 df_p4_c_acc_speed_age <- df_adult %>% 
@@ -253,18 +319,18 @@ df_p4_c_acc_speed_age <- df_adult %>%
   summarize(N.corr = sum(Acc), 
             N.tot = n(), 
             Pct.Corr.mean = 100*N.corr/N.tot)  
-p3_c_acc_speed_age <- ggplot(data =  df_p4_c_acc_speed_age, 
+p3 <- ggplot(data =  df_p4_c_acc_speed_age, 
        aes(y = Pct.Corr.mean, x = Age, color = Speed, shape = Speed, group = Speed) ) + 
     geom_point() +
     geom_smooth(method="lm") +
-    ggtitle("Speed X Age Interaction in Adults") +
+    ggtitle("Adults: Percent correct by coherence and pattern") +
   #  xlim(18,24) +
     xlab("Age") +
     ylab("Mean Accuracy (%)") +
     scale_color_viridis(discrete=TRUE) +   
     theme.custom 
-p3_c_acc_speed_age
-# ggsave("~/R/moco-psychophysics/analysis/pub_image/3_a_acc_speed_age_new.pdf", p3_c_acc_speed_age)
+p3
+# ggsave("~/R/moco-psychophysics/analysis/pub_image/3_a_acc_speed_age_new.pdf", p3)
 ```
 
 ```{r}
@@ -279,17 +345,18 @@ df_p2_a_acc_pat_coh <- df_adult%>%
             Pct.Corr.ci = 1.96*100*sd(Pct.Corr, na.rm=TRUE)/sqrt(length(Pct.Corr)))  #computation of the standard error of the mean, ci is 1.96*sem
 df_p2_a_acc_pat_coh$Coh<-factor(df_p2_a_acc_pat_coh$Coh, levels=c("0.05","0.1","0.15","0.2"), labels=c("5%","10%","15%","20%"))
 df_p2_a_acc_pat_coh$Pattern<-factor(df_p2_a_acc_pat_coh$PatternType, levels=c("linear","radial"), labels=c("Linear","Radial"))
-p2<-ggplot(df_p2_a_acc_pat_coh, aes(x = Coh, y = Pct.Corr*100, color = Pattern, shape=Pattern),  alpha = 0.1) +
+p4<-ggplot(df_p2_a_acc_pat_coh, aes(x = Coh, y = Pct.Corr*100, color = Pattern, shape=Pattern),  alpha = 0.1) +
   geom_point(data = df_p2_a_acc_pat_coh, aes(x = Coh, y = Pct.Corr.mean, color = Pattern), size = 3, position = position_dodge(0.8)) +   
   geom_errorbar(aes(ymin=Pct.Corr.mean-Pct.Corr.ci,ymax=Pct.Corr.mean+Pct.Corr.ci, color = Pattern), position = position_dodge(0.8), width = .5)  + 
   geom_jitter(position=position_dodge(0.8)) +
-  ggtitle("Pattern X Coherence Interaction in adults") +
+  ggtitle("Adults: Percent correct by coherence and pattern") +
   xlab("Coherence") +
   theme.custom + # Position legend in bottom right
   ylab("Mean Accuracy (%)") +
-  scale_color_viridis(discrete=TRUE) 
-p2
-ggsave("~/R/moco-psychophysics/analysis/pub_image/8_a_acc_pattern_coh_new.pdf", p2)
+  scale_color_viridis(discrete=TRUE) +
+  annotate("text", x = 0.6, y = 100, label = "a)", size= 12)
+p4
+# ggsave("~/R/moco-psychophysics/analysis/pub_image/8_a_acc_pattern_coh_new.pdf", p4)
 ```
 ```{r}
 df_p2_a_acc_gen_speed <- df_adult%>% 
@@ -302,16 +369,17 @@ df_p2_a_acc_gen_speed <- df_adult%>%
             Pct.Corr.mean = 100*mean(Pct.Corr, na.rm=TRUE),
             Pct.Corr.ci = 1.96*100*sd(Pct.Corr, na.rm=TRUE)/sqrt(length(Pct.Corr)))  #computation of the standard error of the mean, ci is 1.96*sem
 # df_p2_a_acc_gen_speed$Speed<-factor(df_p2_a_acc_gen_speed$Speed, levels=c("2 deg/s","8 deg/s"), labels=c("2 deg/s","8 deg/s"))
-p5<-ggplot(df_p2_a_acc_gen_speed, aes(x = Gender, y = Pct.Corr*100, color = Speed, shape=Speed),  alpha = 0.5) +
-  geom_point(data = df_p2_a_acc_gen_speed, aes(x = Gender, y = Pct.Corr.mean, color = Speed), size = 3, position = position_dodge(0.8)) +   
-  geom_errorbar(aes(ymin=Pct.Corr.mean-Pct.Corr.ci,ymax=Pct.Corr.mean+Pct.Corr.ci, color = Speed), position = position_dodge(0.8), width = .5)  + 
+p5<-ggplot(df_p2_a_acc_gen_speed, aes(x = Speed, y = Pct.Corr*100, color = Gender, shape=Gender),  alpha = 0.5) +
+  geom_point(data = df_p2_a_acc_gen_speed, aes(x = Speed, y = Pct.Corr.mean, color = Gender), size = 3, position = position_dodge(0.8)) +   
+  geom_errorbar(aes(ymin=Pct.Corr.mean-Pct.Corr.ci,ymax=Pct.Corr.mean+Pct.Corr.ci, color = Gender), position = position_dodge(0.8), width = .5)  + 
   geom_jitter(position=position_dodge(0.8)) +
-  ggtitle("Speed X Gender Interaction in adults") +
+  ggtitle("Adults: Percent correct by sex and speed") +
   theme.custom + # Position legend in bottom right
   ylab("Mean Accuracy (%)") +
-  scale_color_viridis(discrete=TRUE) 
+  scale_color_viridis(discrete=TRUE)  +
+  annotate("text", x = 0.5, y = 90, label = "b)", size= 12)
 p5
-ggsave("~/R/moco-psychophysics/analysis/pub_image/9_a_acc_speed_gender_new.pdf", p5, height=7,width=7)
+# ggsave("~/R/moco-psychophysics/analysis/pub_image/9_a_acc_speed_gender_new.pdf", p5)
 ```
 ```{r}
 df_p2_a_acc_gen_pat <- df_adult%>% 
@@ -324,14 +392,127 @@ df_p2_a_acc_gen_pat <- df_adult%>%
             Pct.Corr.mean = 100*mean(Pct.Corr, na.rm=TRUE),
             Pct.Corr.ci = 1.96*100*sd(Pct.Corr, na.rm=TRUE)/sqrt(length(Pct.Corr)))  #computation of the standard error of the mean, ci is 1.96*sem
 df_p2_a_acc_gen_pat$Pattern<-factor(df_p2_a_acc_gen_pat$PatternType, levels=c("linear","radial"), labels=c("Linear","Radial"))
-p5<-ggplot(df_p2_a_acc_gen_pat, aes(x = Gender, y = Pct.Corr*100, color = Pattern, shape=Pattern),  alpha = 0.5) +
-  geom_point(data = df_p2_a_acc_gen_pat, aes(x = Gender, y = Pct.Corr.mean, color = Pattern), size = 3, position = position_dodge(0.8)) +   
-  geom_errorbar(aes(ymin=Pct.Corr.mean-Pct.Corr.ci,ymax=Pct.Corr.mean+Pct.Corr.ci, color = Pattern), position = position_dodge(0.8), width = .5)  + 
+p6<-ggplot(df_p2_a_acc_gen_pat, aes(x = Pattern, y = Pct.Corr*100, color = Gender, shape=Gender),  alpha = 0.5) +
+  geom_point(data = df_p2_a_acc_gen_pat, aes(x = Pattern, y = Pct.Corr.mean, color = Gender), size = 3, position = position_dodge(0.8)) +   
+  geom_errorbar(aes(ymin=Pct.Corr.mean-Pct.Corr.ci,ymax=Pct.Corr.mean+Pct.Corr.ci, color = Gender), position = position_dodge(0.8), width = .5)  + 
   geom_jitter(position=position_dodge(0.8)) +
-  ggtitle("Pattern X Gender Interaction in adults") +
+  ggtitle("Adults: Percent correct by sex and pattern") +
   theme.custom + # Position legend in bottom right
   ylab("Mean Accuracy (%)") +
-  scale_color_viridis(discrete=TRUE) 
-p5
-ggsave("~/R/moco-psychophysics/analysis/pub_image/8_a_acc_pattern_gender_new.pdf", p5, height=7,width=7)
+  scale_color_viridis(discrete=TRUE) +
+  annotate("text", x = 0.5, y = 90, label = "c)", size= 12)
+p6
+# ggsave("~/R/moco-psychophysics/analysis/pub_image/8_a_acc_pattern_gender_new.pdf", p6, height=7,width=7)
+```
+
+```{r}
+# combine multiple plots into one 
+# pdf("~/R/moco-psychophysics/analysis/pub_image/adult.pdf")
+
+#set the create the frames
+# layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE))
+# or
+# par(mfcol=c(2,2))
+#dev.off shuts down the specified (by default the current) graphical device
+#here it passes the picture to the file
+# dev.off()
+
+
+library(gridExtra)
+
+#p = grid.arrange(ncol = 2, nrow = 2, p4, p5, p6)
+p = grid.arrange(layout_matrix = rbind(c(NA,1,1, NA),
+                                       c(2,2,3,3)), p4, p5, p6)
+#labels = c("a", "b", "c")
+ggsave(plot = p, filename = "~/R/moco-psychophysics/analysis/pub_image/adult1.png", units = "in", height = 12, width = 12, dpi = 600 )
+```
+
+
+
+
+
+# SDT
+```{r get-SDT}
+# library(psycho)
+# Let's simulate three participants with different results at a perceptual detection task
+df_child2 <- df_child %>%
+   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Response, Age) %>%
+   dplyr::filter(Coh==0.15) %>%
+   dplyr::filter(Response %in% c("L","R"))
+str(df_child2)
+
+df_adult2 <- df_adult %>%
+   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Response,Age) %>%
+   dplyr::filter(Coh==0.15)  %>%
+   dplyr::filter(Response %in% c("L","R"))
+df_adult2$SubID<-factor(df_adult2$SubID)
+str(df_adult2)
+
+df2<-rbind(df_child2, df_adult2) 
+df.new<- df2 %>%
+  mutate(group=c(rep('child',nrow(df_child2)),rep('adult',nrow(df_adult2)))) %>%
+  filter(Response != "NA") %>%
+  group_by(SubID, group, Coh, PatternType, Speed, Gender) %>%
+  summarize(n_hit = sum(Response=="L" & Acc=="TRUE"),
+            n_fa  = sum(Response=="L" & Acc=="FALSE"),
+            n_miss = sum(Response=="R" & Acc=="FALSE"),
+            n_cr = sum(Response=="R" & Acc=="TRUE"))
+
+indices <- neuropsychology::dprime(df.new$n_hit, df.new$n_fa, df.new$n_miss, df.new$n_cr)
+df.sdt <- cbind(df.new, indices)
+```
+
+``` {r anova-SDT-d'}
+library(afex)
+df.sdt$SubID<-as.integer(df.sdt$SubID) 
+a_d <- aov_ez(id="SubID", dv = "dprime", df.sdt, between = c("Gender", "group"),within=c("Speed","PatternType") )
+summary(a_d)
+knitr::kable(nice(a_d))
+# calculate power
+library(pwr)
+pwr.anova.test(k = 2, n = 50, f = 0.17, sig.level = 0.05, power = NULL)  # for pattern
+pwr.anova.test(k = 2, n = 29, f = 0.15, sig.level = 0.05, power = NULL)  # for group
+pwr.f2.test(u =27, v = 1, f2 = 34.94, sig.level = 0.05, power = NULL) # age effect in children
+## chilren only
+df.sdt.c<-df.sdt %>% filter(group=="child")
+a_d.c <- aov_ez(id="SubID", dv = "dprime", df.sdt.c, between = c("Gender"),within=c("Speed","PatternType") )
+summary(a_d.c)
+knitr::kable(nice(a_d.c))
+em_c<-emmeans(a_d.c, ~Gender*PatternType)
+pairs(em_c)
+em_c1<-emmeans(a_d.c, ~Gender*Speed)
+pairs(em_c1)
+## adults only
+df.sdt.a<-df.sdt %>% filter(group=="adult")
+a_d.a <- aov_ez(id="SubID", dv = "dprime", df.sdt.a, between = c("Gender"),within=c("Speed","PatternType") )
+summary(a_d.a)
+knitr::kable(nice(a_d.a))
+em_a<-emmeans(a_d.a, ~Gender*PatternType)
+pairs(em_a)
+em_a1<-emmeans(a_d.a, ~Gender*Speed)
+pairs(em_a1)
+
+# What about the estimated marginal means of the design?
+library(emmeans)
+emmeans(a_d, ~Gender* group * Speed*PatternType)
+# What about the ‘main effects?
+em1<-emmeans(a_d, ~Gender)
+em2<-emmeans(a_d, ~group)
+em3<-emmeans(a_d, ~Speed)
+em4<-emmeans(a_d, ~PatternType)
+em5<-emmeans(a_d, ~Speed*group)
+em6<-emmeans(a_d, ~PatternType*group)
+em7<-emmeans(a_d, ~Gender*PatternType)
+em8<-emmeans(a_d, ~Gender*PatternType*group)
+# And pairwise difference among levels of inference validity?
+em1
+pairs(em1)
+df.sdt %>%
+   dplyr::group_by(group) %>%
+   summarize(mean=mean(dprime))
+```
+
+``` {r anova-plot}
+# Plotting results of aov_ez
+emmip(a_d, group ~ PatternType|Speed, CIs = TRUE)
 ```
