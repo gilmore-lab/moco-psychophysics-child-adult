@@ -269,12 +269,13 @@ df_p2_c_acc_pat_coh <- df_child %>%
             Pct.Corr.ci = 1.96*100*sd(Pct.Corr, na.rm=TRUE)/sqrt(length(Pct.Corr)))  #computation of the standard error of the mean, ci is 1.96*sem
 df_p2_c_acc_pat_coh$Coh<-factor(df_p2_c_acc_pat_coh$Coh, levels=c("0.15","0.3","0.45","0.6"), labels=c("15%","30%","45%","60%"))
 df_p2_c_acc_pat_coh$Pattern<-factor(df_p2_c_acc_pat_coh$PatternType, levels=c("linear","radial"), labels=c("Linear","Radial"))
-p0<-ggplot(df_p2_c_acc_pat_coh, aes(x = Coh, y = Pct.Corr*100, color = PatternType, shape=PatternType),  alpha = 0.5) +
-  geom_point(data = df_p2_c_acc_pat_coh, aes(x = Coh, y = Pct.Corr.mean, color = PatternType), size = 3, position = position_dodge(0.8)) +   
-  geom_errorbar(aes(ymin=Pct.Corr.mean-Pct.Corr.ci,ymax=Pct.Corr.mean+Pct.Corr.ci, color = PatternType), position = position_dodge(0.8), width = .5)  + 
+p0<-ggplot(df_p2_c_acc_pat_coh, aes(x = Coh, y = Pct.Corr*100, color = Pattern, shape=Pattern),  alpha = 0.5) +
+  geom_point(data = df_p2_c_acc_pat_coh, aes(x = Coh, y = Pct.Corr.mean, color = Pattern), size = 3, position = position_dodge(0.8)) +   
+  geom_errorbar(aes(ymin=Pct.Corr.mean-Pct.Corr.ci,ymax=Pct.Corr.mean+Pct.Corr.ci, color = Pattern), position = position_dodge(0.8), width = .5)  + 
   geom_jitter(position=position_dodge(0.8)) +
-  ggtitle("Children: Accuracy by coherence and pattern") +
+  ggtitle("Children: Accuracy by coherence & pattern") +
   xlab("Coherence") +
+  ylim(45,100) +
   theme.custom + # Position legend in bottom right
   ylab("Mean Accuracy (%)") +
   scale_color_viridis(discrete=TRUE) +
@@ -301,8 +302,9 @@ p1<-ggplot(df_p2_c_acc_speed_coh, aes(x = Coh, y = Pct.Corr*100, color = Speed, 
   geom_point(data = df_p2_c_acc_speed_coh, aes(x = Coh, y = Pct.Corr.mean, color = Speed), size = 3, position = position_dodge(0.8)) +   
   geom_errorbar(aes(ymin=Pct.Corr.mean-Pct.Corr.ci,ymax=Pct.Corr.mean+Pct.Corr.ci, color = Speed), position = position_dodge(0.8), width = .5)  + 
   geom_jitter(position=position_dodge(0.8)) +
-  ggtitle("Children: Accuracy by coherence and speed") +
+  ggtitle("Children: Accuracy by coherence & speed") +
   xlab("Coherence") +
+  ylim(45,100)+
   theme.custom + # Position legend in bottom right
   ylab("Mean Accuracy (%)") +
   scale_color_viridis(discrete=TRUE) +
@@ -324,8 +326,9 @@ p2 <- ggplot(data =  df_p3_c_acc_speed_age,
        aes(y = Pct.Corr.mean, x = Age, color = Speed, shape = Speed, group = Speed) ) + 
     geom_point() +
     geom_smooth(method="lm") +
-    ggtitle("Children: Accuracy by age and speed") +
+    ggtitle("Children: Accuracy by age & speed") +
     xlim(5,9) +
+    ylim(45,100)+
     xlab("Age") +
     ylab("Mean Accuracy (%)") +
     scale_color_viridis(discrete=TRUE) +   
@@ -351,9 +354,10 @@ p3<-ggplot(df_p2_a_acc_gen_pat, aes(x = Gender, y = Pct.Corr*100, color = Patter
   geom_point(data = df_p2_a_acc_gen_pat, aes(x = Gender, y = Pct.Corr.mean, color = Pattern), size = 3, position = position_dodge(0.8)) +   
   geom_errorbar(aes(ymin=Pct.Corr.mean-Pct.Corr.ci,ymax=Pct.Corr.mean+Pct.Corr.ci, color = Pattern), position = position_dodge(0.8), width = .5)  + 
   geom_jitter(position=position_dodge(0.8)) +
-  ggtitle("Children: Accuracy by sex and pattern") +
+  ggtitle("Children: Accuracy by sex & pattern") +
   theme.custom + # Position legend in bottom right
   ylab("Mean Accuracy (%)") +
+  ylim(45,100) +
   scale_color_viridis(discrete=TRUE) +
   annotate("text", x = 0.5, y = 100, label = "d)", size= 12)
 p3
@@ -382,7 +386,7 @@ p3 <- ggplot(data =  df_p4_c_acc_speed_age,
        aes(y = Pct.Corr.mean, x = Age, color = Speed, shape = Speed, group = Speed) ) + 
     geom_point() +
     geom_smooth(method="lm") +
-    ggtitle("Adults: Percent correct by coherence and pattern") +
+    ggtitle("Adults: Percent correct by coherence & pattern") +
   #  xlim(18,24) +
     xlab("Age") +
     ylab("Mean Accuracy (%)") +
@@ -409,9 +413,10 @@ p4<-ggplot(df_p2_a_acc_pat_coh, aes(x = Coh, y = Pct.Corr*100, color = Pattern, 
   geom_point(data = df_p2_a_acc_pat_coh, aes(x = Coh, y = Pct.Corr.mean, color = Pattern), size = 3, position = position_dodge(0.8)) +   
   geom_errorbar(aes(ymin=Pct.Corr.mean-Pct.Corr.ci,ymax=Pct.Corr.mean+Pct.Corr.ci, color = Pattern), position = position_dodge(0.8), width = .5)  + 
   geom_jitter(position=position_dodge(0.8)) +
-  ggtitle("Adults: Percent correct by coherence and pattern") +
+  ggtitle("Adults: Percent correct by coherence & pattern") +
   xlab("Coherence") +
   theme.custom + # Position legend in bottom right
+  ylim(30,100) +
   ylab("Mean Accuracy (%)") +
   scale_color_viridis(discrete=TRUE) +
   annotate("text", x = 0.6, y = 100, label = "a)", size= 12)
@@ -434,11 +439,12 @@ p5<-ggplot(df_p2_a_acc_gen_speed, aes(x = Speed, y = Pct.Corr*100, color = Gende
   geom_point(data = df_p2_a_acc_gen_speed, aes(x = Speed, y = Pct.Corr.mean, color = Gender), size = 3, position = position_dodge(0.8)) +   
   geom_errorbar(aes(ymin=Pct.Corr.mean-Pct.Corr.ci,ymax=Pct.Corr.mean+Pct.Corr.ci, color = Gender), position = position_dodge(0.8), width = .5)  + 
   geom_jitter(position=position_dodge(0.8)) +
-  ggtitle("Adults: Percent correct by sex and speed") +
+  ggtitle("Adults: Percent correct by sex & speed") +
   theme.custom + # Position legend in bottom right
   ylab("Mean Accuracy (%)") +
+  ylim(30, 100) +
   scale_color_viridis(discrete=TRUE)  +
-  annotate("text", x = 0.5, y = 90, label = "b)", size= 12)
+  annotate("text", x = 0.5, y = 100, label = "b)", size= 12)
 p5
 # ggsave("~/R/moco-psychophysics/analysis/pub_image/9_a_acc_speed_gender_new.pdf", p5)
 ```
@@ -458,11 +464,12 @@ p6<-ggplot(df_p2_a_acc_gen_pat, aes(x = Pattern, y = Pct.Corr*100, color = Gende
   geom_point(data = df_p2_a_acc_gen_pat, aes(x = Pattern, y = Pct.Corr.mean, color = Gender), size = 3, position = position_dodge(0.8)) +   
   geom_errorbar(aes(ymin=Pct.Corr.mean-Pct.Corr.ci,ymax=Pct.Corr.mean+Pct.Corr.ci, color = Gender), position = position_dodge(0.8), width = .5)  + 
   geom_jitter(position=position_dodge(0.8)) +
-  ggtitle("Adults: Percent correct by sex and pattern") +
+  ggtitle("Adults: Percent correct by sex & pattern") +
   theme.custom + # Position legend in bottom right
   ylab("Mean Accuracy (%)") +
+  ylim(30,100)+
   scale_color_viridis(discrete=TRUE) +
-  annotate("text", x = 0.5, y = 90, label = "c)", size= 12)
+  annotate("text", x = 0.5, y = 100, label = "c)", size= 12)
 p6
 # ggsave("~/R/moco-psychophysics/analysis/pub_image/8_a_acc_pattern_gender_new.pdf", p6, height=7,width=7)
 ```
