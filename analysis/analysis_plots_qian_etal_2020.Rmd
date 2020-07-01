@@ -1,5 +1,5 @@
 ---
-title: "MOCO_analysis_final"
+title: "Optic flow motion coherence task analyses and plots"
 author: "Yiming Qian & Rick Gilmore"
 date: "'r Sys.time()'"
 output: 
@@ -9,67 +9,108 @@ output:
     toc_float: true
 ---
 
-# set up the environment
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-library(tidyverse)
-library(lme4)
-library(knitr)
-library(psyphy)
-library(sjPlot)
-library(dplyr)
-library(viridis)
-library(ggplot2)
-library(gridExtra)
-library(afex)
-library(emmeans)
-library(pwr)
+# Purpose
 
-# if (!("pacman" %in% installed.packages()[,])) {
-#     install.packages("pacman")
-#   }
-# library(pacman)
+This document describes the analyses conducted on data from a behavioral study of perceptual sensitivity to optic flow patterns corrupted by random motion noise.
+
+# Preliminary steps
+
+Set chunk options, install libraries (if needed), load libraries, and set the random generator seed for reproducibility.
+We set the chunk option `cache = TRUE` to save on computation time when we re-run the document.
+Since the document is large and contains slow-to-execute model-fitting components, we suggest running the analysis and visualization chunks individually in sequence.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
+# library(tidyverse)
+# library(lme4)
+# library(knitr)
+# library(psyphy)
+# library(sjPlot)
+# library(dplyr)
+# library(viridis)
+# library(ggplot2)
+# library(gridExtra)
+# library(afex)
+# library(emmeans)
+# library(pwr)
+# library(here)
+
+if (!("pacman" %in% installed.packages()[,])) {
+    install.packages("pacman")
+  }
+pacman::p_load(tidyverse, lme4, psyphy, sjPlot, viridis, gridExtra, afex, emmeans, pwr, here, neuropsychology)
 # pacman::p_load(dplyr, ggplot2, knitr, psyphy, lme4, sjPlot)
+
+set.seed(2020)
 ```
 
-# Import aggregate data
+# Import aggregate data and clean
 
-Here we import the aggregate data file found in `analysis/data/child/data-aggregate/moco-beh-child.csv`, convert `Age`(continuous) to a categorical factor, `AgeYrs` (ordinal). Gender is a factor into 1 (female) and 2 (male). In this dataset, the NaN of Acc is fixed but the outliers are not cleaned up.
+We presume that all commands are executed from the project root and that all file paths are relative to the project root: `root_dir`.
 
-Here we import the aggregate adult data file found in `analysis/data/moco-adult.csv`. we also summarize the mean percent correct in adults to chech whether each participant have the the mean accuracy higher than 50% (guess rate).
+```{r}
+root_dir <- here::here()
+```
 
-```{r load-files}
-df_child <-
-  read.csv(file = "~/R/moco-psychophysics/analysis/data/child/data-aggregate/moco-beh-child.csv", header = TRUE)
-df_adult <-
-  read.csv(file = "~/R/moco-psychophysics/analysis/data/moco-adult.csv", header = TRUE)
+## Adult
+
+```{r import-adult}
+df_adult <- readr::read_csv("data/adult/aggregate/adult-aggregate.csv")
+str(df_adult)
+```
+
+We summarize the mean percent correct in adults to check whether each participant has mean accuracy higher than 50% (guess rate).
+
+```{r clean-adult}
 df_adult$Speed <-
   factor(df_adult$Speed, labels = c("2 deg/s", "8 deg/s"))
-df_child$Speed <-
-  factor(df_child$Speed, labels = c("2 deg/s", "8 deg/s"))
-df_child$SubID <- factor(df_child$SubID)
+
 df_adult$SubID <- factor(df_adult$SubID)
-df_child$Age <- df_child$AgeDays / 365.25
-df_child$AgeYrs <- ordered(cut(
-  df_child$AgeDays / 365.25,
-  breaks = c(5, 6, 7, 8, 9),
-  labels = c("5-year-old", "6-year-old", "7-year-old", "8-year-old")
-))
+
 df_adult %>%
   group_by(SubID) %>%
   summarize(N.corr = sum(Acc),
             N.tot = n(),
             Pct.Corr = N.corr / N.tot) ->
   df_adult.summary
-# df_child <- df_child %>%
-#   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Age, AgeYrs, Response)
-#df_adult <- df_adult %>%
-#   dplyr::select(SubID, PatternType, RT, Acc, Speed, Gender, Coh, Age, Response)
+
+df_adult.summary
 ```
 
-# child GLMM
+## Child
 
-In this model, we perform GLMM in child datasets to examine the effects of age, sex, coherence, speed and pattern type on accuracy responses. The DV is the binary response, either right or wrong. The main IVs are age (continuous), sex (factor:2), coherence (factor:4), speed (factor:2), pattern type (factor:2). We want to have the most parsimous model with the IV which are interpretable. The following is the procedures that we find the model with the best model fits.
+```{r import-child}
+df_child <- readr::read_csv("data/child/aggregate/child-aggregate.csv")
+str(df_child)
+```
+
+
+```{r clean-child}
+# Convert speed to factor
+df_child$Speed <-
+  factor(df_child$Speed, labels = c("2 deg/s", "8 deg/s"))
+
+# SubID to factor
+df_child$SubID <- factor(df_child$SubID)
+
+# Age to age in years as ordinal factor
+df_child$Age <- df_child$AgeDays / 365.25
+df_child$AgeYrs <- ordered(cut(
+  df_child$AgeDays / 365.25,
+  breaks = c(5, 6, 7, 8, 9),
+  labels = c("5-year-old", "6-year-old", "7-year-old", "8-year-old")
+))
+```
+
+# Modeling
+
+## Child GLMM
+
+We perform GLMM on the child data sets to examine the effects of age, sex, coherence, speed and pattern type on accuracy responses. 
+The dependent variable (DV) is the binary response, `Acc`, either right or wrong. 
+The main independent variables (IVs) are age (`AgeDays`), sex (`gender`, 2 levels), coherence (`Coh`, 4 levels), speed (`Speed`, 2 levels), pattern type (`PatternType`, 2 levels). 
+We seek the most parsimonious model with IVs that are interpretable. 
+The following are the procedures that we use to find the best-fitting and most-parsimonious model:
 
 (1) all IVs and their interactions
 (2) three main experimental conditions (speed, coherence, pattern) and their interactions
@@ -79,7 +120,10 @@ In this model, we perform GLMM in child datasets to examine the effects of age, 
 (6) check the model with the significant effects
 (7) compare three link function (weibull, logit, probit)
 
-### check the GLMM with logit links functions with all IVs and their interactions
+### All IVs and interactions
+
+Check the GLMM with logit links functions with all IVs and their interactions.
+*Change the chunk option `eval=TRUE` to evaluate this chunk when knitting the document or evaluate manually.*
 
 ```{r acc-logit-full-child, eval=FALSE}
 form.fullmodel <-
@@ -95,9 +139,11 @@ model.acc.logit.full_c <-
 summary(model.acc.logit.full_c)
 ```
 
-### check the GLMM with three experimental conditions and their interactions
+### Three experimental conditions + interactions
 
-```{r acc-logit-full-child, eval=FALSE}
+*Change the chunk option `eval=TRUE` to evaluate this chunk when knitting the document or evaluate manually.*
+
+```{r acc-logit-reduced-child, eval=FALSE}
 form.explor <- Acc ~ scale(Coh) * Speed * PatternType + (1 | SubID)
 model.acc.logit.ex_c <-
   glmer(
@@ -109,9 +155,11 @@ model.acc.logit.ex_c <-
 summary(model.acc.logit.ex_c)
 ```
 
-### check the models with three experimental conditions and their significant interactions
+### Drop non-significant effects
 
-```{r acc-logit-full-child, eval=FALSE}
+*Change the chunk option `eval=TRUE` to evaluate this chunk when knitting the document or evaluate manually.*
+
+```{r acc-logit-drop-interactions-child, eval=FALSE}
 form.explor1 <-
   Acc ~ scale(Coh) + Speed + PatternType + scale(Coh) * Speed + (1 |
                                                                    SubID)
@@ -128,7 +176,9 @@ anova(model.acc.logit.ex1_c, model.acc.logit.ex_c)
 
 ### Add age and sex 
 
-```{r acc-logit-full-child, eval=FALSE}
+*Change the chunk option `eval=TRUE` to evaluate this chunk when knitting the document or evaluate manually.*
+
+```{r acc-logit-drop-interactions-plus-age-plus-sex-child, eval=FALSE}
 form.explor2 <-
   Acc ~ scale(Coh) + Speed + PatternType + Gender + scale(Age) + scale(Coh) *
   Speed + (1 | SubID)
@@ -145,7 +195,9 @@ anova(model.acc.logit.ex1_c, model.acc.logit.ex2_c)
 
 ### Add age-related and sex-related interactions 
 
-```{r acc-logit-full-child, eval=FALSE}
+*Change the chunk option `eval=TRUE` to evaluate this chunk when knitting the document or evaluate manually.*
+
+```{r acc-logit-drop-interactions-plus-age-plus-sex-plus-interactions-child, eval=FALSE}
 form_c.explor3 <-
   Acc ~ scale(Coh) + Speed + PatternType + Gender + scale(Age) + scale(Coh) *
   Speed + Speed * scale(Age) + PatternType * scale(Age) + Speed * Gender +
@@ -161,9 +213,11 @@ summary(model.acc.logit.ex3_c)
 car::Anova(model.acc.logit.ex3_c, model.acc.logit.ex2_c)
 ```
 
-### check the models with significant variables
+### Drop non-significant effects
 
-```{r acc-logit-full-child, eval=FALSE}
+*Change the chunk option `eval=TRUE` to evaluate this chunk when knitting the document or evaluate manually.*
+
+```{r acc-logit-drop-interactions-plus-age-plus-sex-plus-interactions-reduced-child, eval=FALSE}
 form_c.explor4 <-
   Acc ~ scale(Coh) + Speed + PatternType + Gender + scale(Age) + scale(Coh) *
   Speed + Speed * scale(Age) + (1 | SubID)
@@ -178,9 +232,11 @@ summary(model.acc.logit_c)
 car::Anova(model.acc.logit_c, model.acc.logit.ex3_c)
 ```
 
-### check probit& weibull link function
+### Check probit & Weibull link function
 
-```{r acc-probit-full, eval=FALSE}
+*Change the chunk option `eval=TRUE` to evaluate this chunk when knitting the document or evaluate manually.*
+
+```{r check-probit-weibull-child, eval=FALSE}
 model.acc.probit_c <-
   glmer(
     formula = form_c.explor3,
@@ -201,8 +257,9 @@ car::Anova(model.acc.weibull_c, model.acc.logit_c)
 
 The logit link function has the best model fit.
 
-### further examine the final model
-we calculated the chi-square, 95% CI, conditional R square, marginal R square.
+### Further examine the final model
+
+We calculate the chi-square, 95% CI, conditional R square, marginal R square.
 
 ```{r test-child}
 car::Anova(model.acc.logit_c, type = 3)
@@ -217,8 +274,7 @@ VarF / (VarF + VarCorr(model.acc.logit_c)[[1]][1] + attr(VarCorr(model.acc.logit
           2 + (pi ^ 2) / 3)
 
 #compute the conditionnal R-square
-(VarF + VarCorr(model.acc.logit_c)[[1]][1]) / (VarF + VarCorr(model.acc.logit_c)[[1]][1] + (attr(VarCorr(model.acc.logit_c), 'sc') ^
-                                                                                              2) + (pi ^ 2) / 3)
+(VarF + VarCorr(model.acc.logit_c)[[1]][1]) / (VarF + VarCorr(model.acc.logit_c)[[1]][1] + (attr(VarCorr(model.acc.logit_c), 'sc') ^2) + (pi ^ 2) / 3)
 # The residual deviance in logistic regression is fixed to (pi ^ 2) / 3
 
 # get 95% CI
@@ -235,9 +291,13 @@ print(exp(tab))
 ```
 
 
-# adult GLMM
+## Adult GLMM
 
-In this model, we perform GLMM in adult datasets to examine the effects of sex, coherence, speed and pattern type on accuracy responses. The DV is the binary response, either right or wrong. The main IVs are sex (factor:2), coherence (factor:4), speed (factor:2), pattern type (factor:2). We want to have the most parsimous model with the IV which are interpretable. The procedures to find the model with the best model fits is very similar to those to find the best child datasets.
+In this model, we perform GLMM on the adult datasets to examine the effects of sex, coherence, speed and pattern type on accuracy responses. 
+The DV is the binary response of accuracy (`Acc`), either right or wrong. 
+The main IVs are sex (`gender`, 2 levels), coherence (`Coh`, 4 levels), speed (`Speed`, 2 leveles), and pattern type (`PatternType`, 2 levels). 
+We seek the most parsimous model with the IVs which can be interpreted. 
+The procedures to find the model with the best model fits is very similar to those used to find the best-fitting child model:
 
 (1) all IVs and their interactions
 (2) three main experimental conditions (speed, coherence, pattern) and their interactions
@@ -245,11 +305,11 @@ In this model, we perform GLMM in adult datasets to examine the effects of sex, 
 (4) add sex
 (5) add sex-related interactions
 (6) check the model with the significant effects
-(7) compare three link function (weibull, logit, probit)
+(7) compare three link function (Weibull, logit, probit)
 
-### check the GLMM with logit links functions with all IVs and their interactions
+### All IVs and interactions
 
-```{r acc-logit-full-adult, eval=FALSE}
+```{r acc-logit-full-adult-1, eval=FALSE}
 form.fullmodel <-
   Acc ~ scale(Coh) * Speed * PatternType * scale(Age) * Gender + (1 |
                                                                     SubID)
@@ -263,9 +323,9 @@ model.acc.logit.full_a <-
 summary(model.acc.logit.full_a)
 ```
 
-### check the models with three experimental conditions and their interactions
+### Three experimental conditions + interactions
 
-```{r acc-logit-full-adult, eval=FALSE}
+```{r acc-logit-full-adult-2, eval=FALSE}
 form.explor <- Acc ~ scale(Coh) * Speed * PatternType + (1 | SubID)
 model.acc.logit.ex_a <-
   glmer(
@@ -277,9 +337,9 @@ model.acc.logit.ex_a <-
 summary(model.acc.logit.ex_a)
 ```
 
-### check the models with significant effects found in the last model
+### Drop non-significant effects
 
-```{r acc-logit-full-adult, eval=FALSE}
+```{r acc-logit-full-adult-3, eval=FALSE}
 form.explor1 <-
   Acc ~ scale(Coh) + Speed + PatternType + scale(Coh) * PatternType + (1 |
                                                                          SubID)
@@ -294,9 +354,9 @@ summary(model.acc.logit.ex1_a)
 anova(model.acc.logit.ex1_a, model.acc.logit.ex_a)
 ```
 
-### Add gender
+### Add sex
 
-```{r acc-logit-full-adult, eval=FALSE}
+```{r acc-logit-full-adult-4, eval=FALSE}
 form.explor2 <-
   Acc ~ scale(Coh) + Speed + PatternType + scale(Coh) * PatternType + Gender + (1 |
                                                                                   SubID)
@@ -315,7 +375,7 @@ anova(model.acc.logit.ex1_a, model.acc.logit.ex2_a)
 
 Final model reported in manuscript.
 
-```{r}
+```{r acc-logit-full-adult-5}
 form_a.explor3 <-
   Acc ~ scale(Coh) + Speed + PatternType + scale(Coh) * PatternType + Gender + Gender *
   Speed + Gender * PatternType + (1 | SubID)
@@ -330,9 +390,9 @@ summary(model.acc.logit_a)
 anova(model.acc.logit.ex2_a, model.acc.logit_a)
 ```
 
-### probit & weibull link function
+### Check probit & Weibull link function
 
-```{r acc-probit-full, eval=FALSE}
+```{r acc-logit-full-adult-6, eval=FALSE}
 model.acc.probit_a <-
   glmer(
     formula = form_a.explor3,
@@ -350,9 +410,9 @@ model.acc.weibull_a <-
 anova(model.acc.logit_a, model.acc.probit_a, model.acc.weibull_a)
 ```
 
-The logit link function has the best model fit
+The logit link function has the best model fit (lowest AIC, BIC, log likelihood, and deviance).
 
-### further examine the final model
+### Further examine the final model
 
 we calculated the chi-square, 95% CI, conditional R square, marginal R square.
 
@@ -386,7 +446,7 @@ tab <-
 print(exp(tab))
 ```
 
-### Post-hoc comparison of the interaction effects
+### Post-hoc comparison interaction effects
 
 ```{r post-hoc}
 lsmeans::lsmeans(model.acc.logit_a, pairwise ~ Gender:Speed, adjust = "tukey")
@@ -394,9 +454,10 @@ lsmeans::lsmeans(model.acc.logit_a, pairwise ~ Gender:PatternType, adjust =
                    "tukey")
 ```
 
-# plot 
+# Plots 
 
-### make the theme for all figures
+## Theme for all figures
+
 ```{r ggplot-themes}
 # "The APA has determined specifications for the size of figures and the fonts used in them. Figures of one column must be between 2 and 3.25 inches wide (5 to 8.45 cm). Two-column figures must be between 4.25 and 6.875 inches wide (10.6 to 17.5 cm). The height of figures should not exceed the top and bottom margins. The text in a figure should be in a san serif font (such as Helvetica, Arial, or Futura). The font size must be between eight and fourteen point. Use circles and squares to distinguish curves on a line graph (at the same font size as the other labels). "
 theme.custom <- theme(panel.background = element_rect(fill = "white", colour = "grey50"),
@@ -412,8 +473,10 @@ theme.custom <- theme(panel.background = element_rect(fill = "white", colour = "
                       legend.text=element_text(size=18))
 ```
 
-# child figure
-### the figure of the mean accuracy by pattern and coherence
+## Child figures
+
+### Mean accuracy by pattern and coherence
+
 ```{r}
 # df_child$Coh<-factor(df_child$Coh)
 df_p2_c_acc_pat_coh <- df_child %>%
@@ -484,7 +547,8 @@ p0
 # ggsave("~/R/moco-psychophysics/analysis/pub_image/8_c_acc_speed_coh_new.pdf", p0)
 ```
 
-### the figure of speed by coherence interaction
+### Speed by coherence interaction
+
 ```{r}
 # df_child$Coh<-factor(df_child$Coh)
 df_p2_c_acc_speed_coh <- df_child %>%
@@ -548,7 +612,8 @@ p1
 # ggsave("~/R/moco-psychophysics/analysis/pub_image/8_c_acc_speed_coh_new.pdf", p1)
 ```
 
-### the figure of speed by age interaction
+### Speed by age interaction
+
 ```{r plot-acc-age-speed}
 df_p3_c_acc_speed_age <- df_child %>%
   # filter(Group=="linear-radial coh [.15 .3 .45 .6]") %>%
@@ -586,7 +651,8 @@ p2
 # ggsave("~/R/moco-psychophysics/analysis/pub_image/2_c_acc_speed_age_new.pdf", p2)
 ```
 
-### the figure of the mean accuracy by gender and pattern
+### Mean accuracy by gender and pattern
+
 ```{r}
 df_p2_a_acc_gen_pat <- df_child %>%
   group_by(SubID, PatternType, Gender) %>%
@@ -647,7 +713,8 @@ p3 <-
 p3
 ```
 
-### combine these figures into one figure
+### Combine figures
+
 ```{r}
 #p = grid.arrange(ncol = 2, nrow = 2, p0, p1, p2,p3)
 p_c = grid.arrange(layout_matrix = rbind(c(1, 2),
@@ -655,7 +722,7 @@ p_c = grid.arrange(layout_matrix = rbind(c(1, 2),
 #labels = c("a", "b", "c")
 ggsave(
   plot = p_c,
-  filename = "~/R/moco-psychophysics/analysis/pub_image/child.png",
+  filename = paste0(here::here(), "/analysis/pub_image/child.png"),
   units = "in",
   height = 12,
   width = 12,
@@ -663,9 +730,9 @@ ggsave(
 )
 ```
 
-# adult
+## Adult figures
 
-### the figure of mean accuracy by speed and age 
+### Mean accuracy by speed and age 
 
 ```{r plot-acc-age-speed}
 df_p4_c_acc_speed_age <- df_adult %>%
@@ -676,7 +743,7 @@ df_p4_c_acc_speed_age <- df_adult %>%
     N.tot = n(),
     Pct.Corr.mean = 100 * N.corr / N.tot
   )
-p3 <- ggplot(data =  df_p4_c_acc_speed_age,
+p3 <- ggplot(data = df_p4_c_acc_speed_age,
              aes(
                y = Pct.Corr.mean,
                x = Age,
@@ -696,7 +763,7 @@ p3
 # ggsave("~/R/moco-psychophysics/analysis/pub_image/3_a_acc_speed_age_new.pdf", p3)
 ```
 
-### the figure of pattern by coherence interaction
+### Pattern by coherence interaction
 
 ```{r}
 df_p2_a_acc_pat_coh <- df_adult %>%
@@ -766,7 +833,7 @@ p4
 # ggsave("~/R/moco-psychophysics/analysis/pub_image/8_a_acc_pattern_coh_new.pdf", p4)
 ```
 
-### the figure of speed by sex interaction
+### Speed by sex interaction
 
 ```{r}
 df_p2_a_acc_gen_speed <- df_adult %>%
@@ -824,7 +891,7 @@ p5
 # ggsave("~/R/moco-psychophysics/analysis/pub_image/9_a_acc_speed_gender_new.pdf", p5)
 ```
 
-### the figure of pattern by sex interaction
+### Pattern by sex interaction
 
 ```{r}
 df_p2_a_acc_gen_pat <- df_adult %>%
@@ -887,7 +954,7 @@ p6
 # ggsave("~/R/moco-psychophysics/analysis/pub_image/8_a_acc_pattern_gender_new.pdf", p6, height=7,width=7)
 ```
 
-### combine multiple plots into one 
+### Combine plots into one 
 
 ```{r}
 # combine multiple plots into one
@@ -901,16 +968,13 @@ p6
 #here it passes the picture to the file
 # dev.off()
 
-
-library(gridExtra)
-
 #p = grid.arrange(ncol = 2, nrow = 2, p4, p5, p6)
 p = grid.arrange(layout_matrix = rbind(c(NA, 1, 1, NA),
                                        c(2, 2, 3, 3)), p4, p5, p6)
 #labels = c("a", "b", "c")
 ggsave(
   plot = p,
-  filename = "~/R/moco-psychophysics/analysis/pub_image/adult1.png",
+  filename = paste0(here::here(), "/analysis/pub_image/adult1.png"),
   units = "in",
   height = 12,
   width = 12,
@@ -918,11 +982,13 @@ ggsave(
 )
 ```
 
-# SDT
+# Signal detection theory (SDT) analysis
 
 We conducted a comparison between children and adults at the coherence level of 15% using Signal Detection Theory.
 
-### First, combine these two datasets and calculate the d' and c in child and adult datasets from SDT
+### Prepare data
+
+First, combine these two datasets and calculate the d' and c in the child and adult datasets from SDT.
 
 ```{r get-SDT}
 # library(psycho)
@@ -957,7 +1023,9 @@ indices <-
 df.sdt <- cbind(df.new, indices)
 ```
 
-### We conduct four-way ANOVA to examine the effect of sex, group, speed and pattern on perceptual sensivitity (d') and post hoc comparison. 
+### ANOVA
+
+We conduct four-way ANOVA to examine the effect of sex, group, speed and pattern on perceptual sensivitity (d') and include post hoc comparisons. 
 
 ``` {r anova-SDT-d'}
 df.sdt$SubID <- as.integer(df.sdt$SubID)
@@ -1046,7 +1114,7 @@ df.sdt %>%
   summarize(mean = mean(dprime))
 ```
 
-### create the plot for d' in two conditions of pattern and speed.
+### Plt d' in two conditions of pattern and speed.
 
 ``` {r anova-plot}
 # Plotting results of aov_ez
