@@ -1,0 +1,25 @@
+field_name,field_type,field_description
+ParticipantID,numeric,"participant identifier"\n
+SessionDate,date,"test day minus year"\n
+Block,numeric,"testing block"\n
+Trial,numeric,"trial number"\n
+PatternType,character,"motion pattern type, one of {radial,linear}"\n
+LeftCoh,numeric,"motion coherence on left side of screen"\n
+RightCoh,numeric,"motion coherence on right side of screen"\n
+Response,character,"response side, one of {L,R}"\n
+RT,numeric,"reaction time in seconds"\n
+Acc,logical,"was response correct?"\n
+Coh,numeric,"motion coherence for trial"\n
+Run,numeric,"run number"\n
+DegPSec,number,"motion speed in deg/sec"\n
+Gender,character,"self-reported gender"\n
+Race,character,"self-reported race"\n
+Ethnicity,character,"self-reported ethinicity"\n
+Language,character,"self-reported primary language"\n
+Setting,character,"testing location"\n
+State,character,"testing state"\n
+SpeedOrder,character,"testing order category"\n
+AgeYears,numeric,"age at test in years"\n
+Age,numeric,"age at test in years"\n
+SubID,numeric,"participant identifier"\n
+Speed,numeric,"speed in deg/s"
