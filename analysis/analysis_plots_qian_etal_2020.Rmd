@@ -102,6 +102,23 @@ df_child$AgeYrs <- ordered(cut(
 ))
 ```
 
+```{r 25-child}
+# Convert speed to factor
+df_child<-df_child %>% filter(Group=="linear-radial coh [.15 .3 .45 .6]")
+
+df_child %>%
+  group_by(PatternType, Speed, Coh) %>%
+  summarize(N.corr = sum(Acc),
+            N.tot = n(),
+            Pct.Corr = N.corr / N.tot) ->
+  df_child.summary
+
+df_child.summary
+
+table(df_child$Gender)
+table(df_child$Condition)
+```
+
 # Modeling
 
 ## Child GLMM
@@ -161,7 +178,7 @@ summary(model.acc.logit.ex_c)
 
 ```{r acc-logit-drop-interactions-child, eval=FALSE}
 form.explor1 <-
-  Acc ~ scale(Coh) + Speed + PatternType + scale(Coh) * Speed + (1 |
+  Acc ~ scale(Coh) + Speed + PatternType + scale(Coh) * Speed + PatternType*Speed + (1 |
                                                                    SubID)
 model.acc.logit.ex1_c <-
   glmer(
@@ -181,7 +198,7 @@ anova(model.acc.logit.ex1_c, model.acc.logit.ex_c)
 ```{r acc-logit-drop-interactions-plus-age-plus-sex-child, eval=FALSE}
 form.explor2 <-
   Acc ~ scale(Coh) + Speed + PatternType + Gender + scale(Age) + scale(Coh) *
-  Speed + (1 | SubID)
+  Speed + PatternType*Speed + (1 | SubID)
 model.acc.logit.ex2_c <-
   glmer(
     formula = form.explor2,
@@ -199,9 +216,9 @@ anova(model.acc.logit.ex1_c, model.acc.logit.ex2_c)
 
 ```{r acc-logit-drop-interactions-plus-age-plus-sex-plus-interactions-child, eval=FALSE}
 form_c.explor3 <-
-  Acc ~ scale(Coh) + Speed + PatternType + Gender + scale(Age) + scale(Coh) *
+  Acc ~ scale(Coh) + Speed + PatternType + scale(Age) + scale(Coh) *
   Speed + Speed * scale(Age) + PatternType * scale(Age) + Speed * Gender +
-  PatternType * Gender + (1 | SubID)
+  PatternType * Gender + scale(Coh) *Gender+ (1 | SubID)
 model.acc.logit.ex3_c <-
   glmer(
     formula = form_c.explor3,
@@ -218,9 +235,24 @@ car::Anova(model.acc.logit.ex3_c, model.acc.logit.ex2_c)
 *Change the chunk option `eval=TRUE` to evaluate this chunk when knitting the document or evaluate manually.*
 
 ```{r acc-logit-drop-interactions-plus-age-plus-sex-plus-interactions-reduced-child, eval=FALSE}
+df_childx<-df_child
+df_childx$Coh<-factor(df_childx$Coh )
+
+form_c.explor4 <-
+  Acc ~ Coh + Speed + PatternType + Gender + scale(Age) + Coh *
+  Speed + Speed * scale(Age) +Coh *Gender+ (1 | SubID)
+model.acc.logit_c <-
+  glmer(
+    formula = form_c.explor4,
+    family = binomial(mafc.logit(2)),
+    glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)),
+    data = df_childx
+  )
+summary(model.acc.logit_c)
+
 form_c.explor4 <-
   Acc ~ scale(Coh) + Speed + PatternType + Gender + scale(Age) + scale(Coh) *
-  Speed + Speed * scale(Age) + (1 | SubID)
+  Speed + Speed * scale(Age) +scale(Coh) *Gender+ (1 | SubID)
 model.acc.logit_c <-
   glmer(
     formula = form_c.explor4,
@@ -289,7 +321,9 @@ tab <-
 # however, this result is different from the below
 print(exp(tab))
 ```
-
+```{r post-hoc}
+lsmeans::lsmeans(model.acc.logit_c, pairwise ~ Gender:Coh, adjust = "tukey")
+```
 
 ## Adult GLMM
 
@@ -552,7 +586,6 @@ p0
 ```{r}
 # df_child$Coh<-factor(df_child$Coh)
 df_p2_c_acc_speed_coh <- df_child %>%
-  filter(Group == "linear-radial coh [.15 .3 .45 .6]") %>%
   group_by(SubID, Speed, Coh) %>%
   summarize(N.corr = sum(Acc),
             N.tot = n(),
@@ -606,7 +639,7 @@ p1 <-
     y = 100,
     label = "b)",
     size = 12
-  )
+  ) 
 #  theme(legend.title=element_blank())
 p1
 # ggsave("~/R/moco-psychophysics/analysis/pub_image/8_c_acc_speed_coh_new.pdf", p1)
