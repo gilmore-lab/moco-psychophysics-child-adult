@@ -509,77 +509,44 @@ theme.custom <- theme(panel.background = element_rect(fill = "white", colour = "
 
 ## Child figures
 
-### Mean accuracy by pattern and coherence
-
-```{r}
-# df_child$Coh<-factor(df_child$Coh)
-df_p2_c_acc_pat_coh <- df_child %>%
-  filter(Group == "linear-radial coh [.15 .3 .45 .6]") %>%
-  group_by(SubID, PatternType, Coh) %>%
-  summarize(N.corr = sum(Acc),
-            N.tot = n(),
-            Pct.Corr = N.corr / N.tot)  %>%
-  group_by(PatternType, Coh) %>%
-  mutate(
-    n = length(Pct.Corr),
-    Pct.Corr.mean = 100 * mean(Pct.Corr, na.rm = TRUE),
-    Pct.Corr.ci = 1.96 * 100 * sd(Pct.Corr, na.rm = TRUE) / sqrt(length(Pct.Corr))
-  )  #computation of the standard error of the mean, ci is 1.96*sem
-df_p2_c_acc_pat_coh$Coh <-
-  factor(
-    df_p2_c_acc_pat_coh$Coh,
-    levels = c("0.15", "0.3", "0.45", "0.6"),
-    labels = c("15%", "30%", "45%", "60%")
+### Mean accuracy by pattern and age
+```{r plot-acc-age-speed}
+df_p3_c_acc_pat_age <- df_child %>%
+  # filter(Group=="linear-radial coh [.15 .3 .45 .6]") %>%
+  group_by(SubID, PatternType, Age) %>%
+  summarize(
+    N.corr = sum(Acc),
+    N.tot = n(),
+    Pct.Corr.mean = 100 * N.corr / N.tot
   )
-df_p2_c_acc_pat_coh$Pattern <-
-  factor(
-    df_p2_c_acc_pat_coh$PatternType,
-    levels = c("linear", "radial"),
-    labels = c("Linear", "Radial")
-  )
-p0 <-
-  ggplot(
-    df_p2_c_acc_pat_coh,
-    aes(
-      x = Coh,
-      y = Pct.Corr * 100,
-      color = Pattern,
-      shape = Pattern
-    ),
-    alpha = 0.5
-  ) +
-  geom_point(
-    data = df_p2_c_acc_pat_coh,
-    aes(x = Coh, y = Pct.Corr.mean, color = Pattern),
-    size = 3,
-    position = position_dodge(0.8)
-  ) +
-  geom_errorbar(
-    aes(
-      ymin = Pct.Corr.mean - Pct.Corr.ci,
-      ymax = Pct.Corr.mean + Pct.Corr.ci,
-      color = Pattern
-    ),
-    position = position_dodge(0.8),
-    width = .5
-  )  +
-  geom_jitter(position = position_dodge(0.8)) +
-  ggtitle("Children: Accuracy by coherence & pattern") +
-  xlab("Coherence") +
+p1 <- ggplot(data =  df_p3_c_acc_pat_age,
+             aes(
+               y = Pct.Corr.mean,
+               x = Age,
+               color = PatternType,
+               shape = PatternType,
+               group = PatternType
+             )) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  ggtitle("Children: Accuracy by age & pattern") +
+  xlim(5, 9) +
   ylim(45, 100) +
-  theme.custom + # Position legend in bottom right
+  xlab("Age") +
   ylab("Mean Accuracy (%)") +
   scale_color_viridis(discrete = TRUE) +
+  theme.custom +
   annotate(
     "text",
-    x = 0.6,
+    x = 5,
     y = 100,
-    label = "a)",
+    label = "c)",
     size = 12
   )
-p0
-# ggsave("~/R/moco-psychophysics/analysis/pub_image/8_c_acc_speed_coh_new.pdf", p0)
+p1
+# ggsave("~/R/moco-psychophysics/analysis/pub_image/2_c_acc_speed_age_new.pdf", p2)
 ```
+
 
 ### Speed by coherence interaction
 
@@ -602,7 +569,7 @@ df_p2_c_acc_speed_coh$Coh <-
     levels = c("0.15", "0.3", "0.45", "0.6"),
     labels = c("15%", "30%", "45%", "60%")
   )
-p1 <-
+p3 <-
   ggplot(df_p2_c_acc_speed_coh,
          aes(
            x = Coh,
@@ -641,7 +608,7 @@ p1 <-
     size = 12
   ) 
 #  theme(legend.title=element_blank())
-p1
+p3
 # ggsave("~/R/moco-psychophysics/analysis/pub_image/8_c_acc_speed_coh_new.pdf", p1)
 ```
 
@@ -684,40 +651,40 @@ p2
 # ggsave("~/R/moco-psychophysics/analysis/pub_image/2_c_acc_speed_age_new.pdf", p2)
 ```
 
-### Mean accuracy by gender and pattern
+### Mean accuracy by gender and coh
 
 ```{r}
-df_p2_a_acc_gen_pat <- df_child %>%
-  group_by(SubID, PatternType, Gender) %>%
+df_p2_a_acc_gen_coh <- df_child %>%
+  group_by(SubID, Coh, Gender) %>%
   summarize(N.corr = sum(Acc),
             N.tot = n(),
             Pct.Corr = N.corr / N.tot)  %>%
-  group_by(PatternType, Gender) %>%
+  group_by(Coh, Gender) %>%
   mutate(
     n = length(Pct.Corr),
     Pct.Corr.mean = 100 * mean(Pct.Corr, na.rm = TRUE),
     Pct.Corr.ci = 1.96 * 100 * sd(Pct.Corr, na.rm = TRUE) / sqrt(length(Pct.Corr))
   )  #computation of the standard error of the mean, ci is 1.96*sem
-df_p2_a_acc_gen_pat$Pattern <-
+df_p2_a_acc_gen_coh$Coh <-
   factor(
-    df_p2_a_acc_gen_pat$PatternType,
-    levels = c("linear", "radial"),
-    labels = c("Linear", "Radial")
+    df_p2_a_acc_gen_coh$Coh,
+    levels = c("0.15", "0.3", "0.45", "0.6"),
+    labels = c("15%", "30%", "45%", "60%")
   )
-p3 <-
+p4 <-
   ggplot(
-    df_p2_a_acc_gen_pat,
+    df_p2_a_acc_gen_coh,
     aes(
-      x = Gender,
+      x = Coh,
       y = Pct.Corr * 100,
-      color = Pattern,
-      shape = Pattern
+      color = Gender,
+      shape = Gender
     ),
     alpha = 0.5
   ) +
   geom_point(
-    data = df_p2_a_acc_gen_pat,
-    aes(x = Gender, y = Pct.Corr.mean, color = Pattern),
+    data = df_p2_a_acc_gen_coh,
+    aes(x = Coh, y = Pct.Corr.mean, color = Gender),
     size = 3,
     position = position_dodge(0.8)
   ) +
@@ -725,13 +692,13 @@ p3 <-
     aes(
       ymin = Pct.Corr.mean - Pct.Corr.ci,
       ymax = Pct.Corr.mean + Pct.Corr.ci,
-      color = Pattern
+      color = Gender
     ),
     position = position_dodge(0.8),
     width = .5
   )  +
   geom_jitter(position = position_dodge(0.8)) +
-  ggtitle("Children: Accuracy by sex & pattern") +
+  ggtitle("Children: Accuracy by sex & coherence") +
   theme.custom + # Position legend in bottom right
   ylab("Mean Accuracy (%)") +
   ylim(45, 100) +
@@ -743,7 +710,7 @@ p3 <-
     label = "d)",
     size = 12
   )
-p3
+p4
 ```
 
 ### Combine figures
@@ -751,11 +718,11 @@ p3
 ```{r}
 #p = grid.arrange(ncol = 2, nrow = 2, p0, p1, p2,p3)
 p_c = grid.arrange(layout_matrix = rbind(c(1, 2),
-                                         c(3, 4)), p0, p1, p2, p3)
+                                         c(3, 4)),  p1, p2, p3, p4)
 #labels = c("a", "b", "c")
 ggsave(
   plot = p_c,
-  filename = paste0(here::here(), "/analysis/pub_image/child.png"),
+  filename = paste0(here::here(), "/analysis/pub_image/child1.png"),
   units = "in",
   height = 12,
   width = 12,

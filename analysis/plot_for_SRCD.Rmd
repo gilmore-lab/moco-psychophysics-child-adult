@@ -1,0 +1,350 @@
+---
+title: "Visualization_posterSRCD"
+author: "Yiming Qian"
+date: "3/15/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
+# library(tidyverse)
+# library(lme4)
+# library(knitr)
+# library(psyphy)
+# library(sjPlot)
+# library(dplyr)
+# library(viridis)
+# library(ggplot2)
+# library(gridExtra)
+# library(afex)
+# library(emmeans)
+# library(pwr)
+# library(here)
+
+if (!("pacman" %in% installed.packages()[,])) {
+    install.packages("pacman")
+  }
+pacman::p_load(tidyverse, lme4, psyphy, sjPlot, viridis, gridExtra, afex, emmeans, pwr, here, neuropsychology)
+# pacman::p_load(dplyr, ggplot2, knitr, psyphy, lme4, sjPlot)
+
+set.seed(2020)
+```
+
+```{r ggplot-themes}
+# "The APA has determined specifications for the size of figures and the fonts used in them. Figures of one column must be between 2 and 3.25 inches wide (5 to 8.45 cm). Two-column figures must be between 4.25 and 6.875 inches wide (10.6 to 17.5 cm). The height of figures should not exceed the top and bottom margins. The text in a figure should be in a san serif font (such as Helvetica, Arial, or Futura). The font size must be between eight and fourteen point. Use circles and squares to distinguish curves on a line graph (at the same font size as the other labels). "
+theme.custom <- theme(panel.background = element_rect(fill = "white", colour = "grey50"),
+                      plot.title = element_text(size=13, face="bold"),
+                      axis.title.x = element_text(size=18),
+                      axis.title.y = element_text(size=18),
+                      strip.text = element_text(size=18),
+                      axis.text = element_text(size=18),
+                      legend.position = c(0.85,0.14),
+                      legend.title=element_text(size=18),
+#  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                   #   legend.title=element_blank(),
+                      legend.text=element_text(size=18))
+```
+
+## get the dataset
+```{r}
+df_adult$group<-"Adult"
+df_child$group<-"Child"
+df_combined<-rbind(df_adult[,c("SubID","Gender","PatternType","Speed","Acc","group")], df_child[,c("SubID","Gender","PatternType","Speed","Acc","group")])
+```
+
+
+### Group by sex interaction
+
+```{r}
+df_p2_a_acc_gen_pat <- df_combined %>%
+  group_by(SubID, group, Gender) %>%
+  summarize(N.corr = sum(Acc),
+            N.tot = n(),
+            Pct.Corr = N.corr / N.tot)  %>%
+  group_by(group, Gender) %>%
+  mutate(
+    n = length(Pct.Corr),
+    Pct.Corr.mean = 100 * mean(Pct.Corr, na.rm = TRUE),
+    Pct.Corr.ci = 1.96 * 100 * sd(Pct.Corr, na.rm = TRUE) / sqrt(length(Pct.Corr))
+  )  #computation of the standard error of the mean, ci is 1.96*sem
+df_p2_a_acc_gen_pat$group <-
+  factor(
+    df_p2_a_acc_gen_pat$group,
+    levels = c("Child", "Adult"),
+    labels = c("Children", "Adults")
+  )
+p7 <-
+  ggplot(
+    df_p2_a_acc_gen_pat,
+    aes(
+      x = group,
+      y = Pct.Corr * 100,
+      color = Gender,
+      shape = Gender
+    ),
+    alpha = 0.5
+  ) +
+  geom_point(
+    data = df_p2_a_acc_gen_pat,
+    aes(x = group, y = Pct.Corr.mean, color = Gender),
+    size = 4,
+    position = position_dodge(0.8)
+  ) +
+  geom_errorbar(
+    aes(
+      ymin = Pct.Corr.mean - Pct.Corr.ci,
+      ymax = Pct.Corr.mean + Pct.Corr.ci,
+      color = Gender
+    ),
+    position = position_dodge(0.8),
+    width = .5
+  )  +
+  geom_jitter(size=2, width=0.2) +
+  ggtitle("Group comparison: Sex difference") +
+  theme.custom + # Position legend in bottom right
+  ylab("Mean Accuracy (%)") +
+  ylim(55, 100) +
+  theme(legend.position = c(0.25, 0.2)) +
+ # scale_colour_grey(start=0, end=0.5) +
+    scale_colour_manual(values=c( "#D55E00","#4E84C4"))
+p7
+```
+
+# sex by speed in adults
+```{r}
+df_p2_a_acc_gen_speed <- df_adult %>%
+  group_by(SubID, Speed, Gender) %>%
+  summarize(N.corr = sum(Acc),
+            N.tot = n(),
+            Pct.Corr = N.corr / N.tot)  %>%
+  group_by(Speed, Gender) %>%
+  mutate(
+    n = length(Pct.Corr),
+    Pct.Corr.mean = 100 * mean(Pct.Corr, na.rm = TRUE),
+    Pct.Corr.ci = 1.96 * 100 * sd(Pct.Corr, na.rm = TRUE) / sqrt(length(Pct.Corr))
+  )  #computation of the standard error of the mean, ci is 1.96*sem
+
+p8 <-
+  ggplot(
+    df_p2_a_acc_gen_speed,
+    aes(
+      x = Speed,
+      y = Pct.Corr * 100,
+      color = Gender,
+      shape = Gender
+    ),
+    alpha = 0.5
+  ) +
+  geom_point(
+    data = df_p2_a_acc_gen_speed,
+    aes(x = Speed, y = Pct.Corr.mean, color = Gender),
+    size = 4,
+    position = position_dodge(0.8)
+  ) +
+  geom_errorbar(
+    aes(
+      ymin = Pct.Corr.mean - Pct.Corr.ci,
+      ymax = Pct.Corr.mean + Pct.Corr.ci,
+      color = Gender
+    ),
+    position = position_dodge(0.8),
+    width = .5
+  )  +
+  geom_jitter(size=2, width=0.2) +
+  ggtitle("Adults: Sex by Speed") +
+  theme.custom + # Position legend in bottom right
+  ylab("Mean Accuracy (%)") +
+  ylim(55, 100) +
+  theme(legend.position = c(0.5, 0.83)) +
+ # scale_colour_grey(start=0, end=0.5) +
+    scale_colour_manual(values=c( "#D55E00","#4E84C4"))
+p8
+```
+
+# sex by pattern in adults
+```{r}
+df_p_a_acc_gen_pat <- df_adult %>%
+  group_by(SubID, PatternType, Gender) %>%
+  summarize(N.corr = sum(Acc),
+            N.tot = n(),
+            Pct.Corr = N.corr / N.tot)  %>%
+  group_by(PatternType, Gender) %>%
+  mutate(
+    n = length(Pct.Corr),
+    Pct.Corr.mean = 100 * mean(Pct.Corr, na.rm = TRUE),
+    Pct.Corr.ci = 1.96 * 100 * sd(Pct.Corr, na.rm = TRUE) / sqrt(length(Pct.Corr))
+  )  #computation of the standard error of the mean, ci is 1.96*sem
+
+p9 <-
+  ggplot(
+    df_p_a_acc_gen_pat,
+    aes(
+      x = PatternType,
+      y = Pct.Corr * 100,
+      color = Gender,
+      shape = Gender
+    ),
+    alpha = 0.5
+  ) +
+  geom_point(
+    data = df_p_a_acc_gen_pat,
+    aes(x = PatternType, y = Pct.Corr.mean, color = Gender),
+    size = 4,
+    position = position_dodge(0.8)
+  ) +
+  geom_errorbar(
+    aes(
+      ymin = Pct.Corr.mean - Pct.Corr.ci,
+      ymax = Pct.Corr.mean + Pct.Corr.ci,
+      color = Gender
+    ),
+    position = position_dodge(0.8),
+    width = .5
+  )  +
+  geom_jitter(size=2, width=0.2) +
+  ggtitle("Adults: Sex by Pattern") +
+  theme.custom + # Position legend in bottom right
+  ylab("Mean Accuracy (%)") +
+  ylim(55, 100) +
+  theme(legend.position = c(0.5, 0.83)) +
+ # scale_colour_grey(start=0, end=0.5) +
+    scale_colour_manual(values=c( "#D55E00","#4E84C4"))
+p9
+```
+
+### Combine plots into one 
+
+```{r}
+ggsave(
+  plot = p7,
+  filename = paste0(here::here(), "/analysis/pub_image/result1.png"),
+  units = "in",
+  height = 4,
+  width = 4,
+  dpi = 600
+)
+
+p = grid.arrange(ncol = 2, nrow = 1, p8, p9)
+#labels = c("a", "b", "c")
+ggsave(
+  plot = p,
+  filename = paste0(here::here(), "/analysis/pub_image/result2.png"),
+  units = "in",
+  height = 4,
+  width = 8,
+  dpi = 600
+)
+```
+# sex by speed in adults
+```{r}
+df_p2_c_acc_gen_speed <- df_child %>%
+  group_by(SubID, Speed, Gender) %>%
+  summarize(N.corr = sum(Acc),
+            N.tot = n(),
+            Pct.Corr = N.corr / N.tot)  %>%
+  group_by(Speed, Gender) %>%
+  mutate(
+    n = length(Pct.Corr),
+    Pct.Corr.mean = 100 * mean(Pct.Corr, na.rm = TRUE),
+    Pct.Corr.ci = 1.96 * 100 * sd(Pct.Corr, na.rm = TRUE) / sqrt(length(Pct.Corr))
+  )  #computation of the standard error of the mean, ci is 1.96*sem
+
+p4 <-
+  ggplot(
+    df_p2_a_acc_gen_speed,
+    aes(
+      x = Speed,
+      y = Pct.Corr * 100,
+      color = Gender,
+      shape = Gender
+    ),
+    alpha = 0.5
+  ) +
+  geom_point(
+    data = df_p2_a_acc_gen_speed,
+    aes(x = Speed, y = Pct.Corr.mean, color = Gender),
+    size = 4,
+    position = position_dodge(0.8)
+  ) +
+  geom_errorbar(
+    aes(
+      ymin = Pct.Corr.mean - Pct.Corr.ci,
+      ymax = Pct.Corr.mean + Pct.Corr.ci,
+      color = Gender
+    ),
+    position = position_dodge(0.8),
+    width = .5
+  )  +
+  geom_jitter(size=2, width=0.2) +
+  ggtitle("Children: Sex by Speed") +
+  theme.custom + # Position legend in bottom right
+  ylab("Mean Accuracy (%)") +
+  ylim(55, 100) +
+  theme(legend.position = c(0.5, 0.83)) +
+ # scale_colour_grey(start=0, end=0.5) +
+    scale_colour_manual(values=c( "#D55E00","#4E84C4"))
+p4
+```
+# sex by pattern in children
+```{r}
+df_p_c_acc_gen_pat <- df_child %>%
+  group_by(SubID, PatternType, Gender) %>%
+  summarize(N.corr = sum(Acc),
+            N.tot = n(),
+            Pct.Corr = N.corr / N.tot)  %>%
+  group_by(PatternType, Gender) %>%
+  mutate(
+    n = length(Pct.Corr),
+    Pct.Corr.mean = 100 * mean(Pct.Corr, na.rm = TRUE),
+    Pct.Corr.ci = 1.96 * 100 * sd(Pct.Corr, na.rm = TRUE) / sqrt(length(Pct.Corr))
+  )  #computation of the standard error of the mean, ci is 1.96*sem
+
+p3 <-
+  ggplot(
+    df_p_c_acc_gen_pat,
+    aes(
+      x = PatternType,
+      y = Pct.Corr * 100,
+      color = Gender,
+      shape = Gender
+    ),
+    alpha = 0.5
+  ) +
+  geom_point(
+    data = df_p_a_acc_gen_pat,
+    aes(x = PatternType, y = Pct.Corr.mean, color = Gender),
+    size = 4,
+    position = position_dodge(0.8)
+  ) +
+  geom_errorbar(
+    aes(
+      ymin = Pct.Corr.mean - Pct.Corr.ci,
+      ymax = Pct.Corr.mean + Pct.Corr.ci,
+      color = Gender
+    ),
+    position = position_dodge(0.8),
+    width = .5
+  )  +
+  geom_jitter(size=2, width=0.2) +
+  ggtitle("Children: Sex by Pattern") +
+  theme.custom + # Position legend in bottom right
+  ylab("Mean Accuracy (%)") +
+  ylim(55, 100) +
+  theme(legend.position = c(0.5, 0.2)) +
+ # scale_colour_grey(start=0, end=0.5) +
+    scale_colour_manual(values=c( "#D55E00","#4E84C4"))
+p3
+```
+
+```{r}
+p = grid.arrange(ncol = 2, nrow = 1, p4, p3)
+#labels = c("a", "b", "c")
+ggsave(
+  plot = p,
+  filename = paste0(here::here(), "/analysis/pub_image/result3.png"),
+  units = "in",
+  height = 4,
+  width = 8,
+  dpi = 600
+)
+```
